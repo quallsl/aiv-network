@@ -29,9 +29,21 @@ function backdropFromVideo(cloudName, watchId) {
   return `https://res.cloudinary.com/${cloudName}/video/upload/so_0,c_fill,w_1600,h_900,q_auto,f_auto/${watchId}.jpg`;
 }
 
+function isTrailerItem(item) {
+  const hay = `${item?.id ?? ""} ${item?.title ?? ""}`.toLowerCase();
+  return hay.includes("trailer");
+}
+
+function pickFeatured(items) {
+  // Prefer a non-trailer as the featured hero
+  const features = items.filter((x) => !isTrailerItem(x));
+  return features[0] || items[0] || null;
+}
+
 // GET /api/catalog
 export async function GET() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const cloudName =
+    process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
@@ -57,7 +69,6 @@ export async function GET() {
 
   const auth = `Basic ${b64(`${apiKey}:${apiSecret}`)}`;
 
-  // Cloudinary Admin API list videos
   const url =
     `https://api.cloudinary.com/v1_1/${cloudName}/resources/video` +
     `?prefix=${encodeURIComponent(prefix)}` +
@@ -67,28 +78,26 @@ export async function GET() {
 
   const res = await fetch(url, {
     headers: { Authorization: auth },
-    // avoid caching during dev; in prod you can enable revalidate
     cache: "no-store",
   });
 
   const data = await res.json();
 
   if (!res.ok) {
-    return NextResponse.json(
-      { error: "Cloudinary API error", details: data },
-      { status: res.status }
-    );
+    return NextResponse.json({ error: "Cloudinary API error", details: data }, { status: res.status });
   }
 
   const resources = Array.isArray(data.resources) ? data.resources : [];
 
+  // Newest-first (created_at desc), then id desc as tie-breaker
   const items = resources
     .map((r) => {
-      const watchId = r.public_id; // this is the correct Cloudinary ID for playback (no extension)
+      const watchId = r.public_id;
+      const title = prettifyTitle(watchId);
       return {
         id: watchId,
         watchId,
-        title: prettifyTitle(watchId),
+        title,
         year: (r.created_at || "").slice(0, 4),
         duration: durationText(r.duration),
         tags: ["AIV", "Original"],
@@ -96,31 +105,51 @@ export async function GET() {
         backdrop: backdropFromVideo(cloudName, watchId),
       };
     })
-    .sort((a, b) => (a.id < b.id ? 1 : -1));
+    .sort((a, b) => {
+      const ad = a?.createdAt ?? "";
+      const bd = b?.createdAt ?? "";
+      if (ad !== bd) return ad < bd ? 1 : -1;
+      return a.id < b.id ? 1 : -1;
+    });
 
-  const hero = items[0] || {
-    id: "empty",
-    watchId: "",
-    title: "Upload a video to Cloudinary",
-    synopsis: `No videos found under prefix "${prefix}".`,
-    year: "",
-    duration: "",
-    tags: ["AIV"],
-    poster: "",
-    backdrop: "",
+  const featured = pickFeatured(items);
+
+  if (!featured) {
+    const emptyCatalog = {
+      hero: {
+        id: "empty",
+        watchId: "",
+        title: "Upload a video to Cloudinary",
+        synopsis: `No videos found under prefix "${prefix}".`,
+        year: "",
+        duration: "",
+        tags: ["AIV"],
+        poster: "",
+        backdrop: "",
+      },
+      rows: [],
+    };
+    return NextResponse.json({ catalog: emptyCatalog, count: 0, prefix });
+  }
+
+  const trailers = items.filter(isTrailerItem);
+  const features = items.filter((x) => !isTrailerItem(x));
+
+  const hero = {
+    ...featured,
+    synopsis:
+      "Now streaming on AIV Network. Upload more films to your Cloudinary folder to expand your catalog.",
   };
 
-  const catalog = {
-    hero: {
-      ...hero,
-      synopsis:
-        hero.synopsis ||
-        "Now streaming on AIV Network. Upload more films to your Cloudinary folder to expand your catalog.",
-    },
-    rows: [
-      { title: "AIV Originals", items },
-    ],
-  };
+  const rows = [];
+
+  // Always show featured as a row so it’s obvious + clickable
+  rows.push({ title: "Featured", items: [featured] });
+
+  if (trailers.length) rows.push({ title: "Trailers", items: trailers });
+  if (features.length) rows.push({ title: "AIV Originals", items: features });
+
+  const catalog = { hero, rows };
 
   return NextResponse.json({ catalog, count: items.length, prefix });
 }
