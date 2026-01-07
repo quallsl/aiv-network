@@ -3,8 +3,11 @@ import Link from "next/link";
 export default function Hero({ item }) {
   if (!item) return null;
 
-  const id = item?.watchId || item?.id;
-  const href = id ? `/watch/${encodeURIComponent(id)}` : "#";
+  const featureId = item?.watchId || item?.id;
+  const trailerId = item?.trailerId || null;
+
+  const watchHref = featureId ? `/watch/${encodeURIComponent(featureId)}` : "#";
+  const trailerHref = trailerId ? `/watch/${encodeURIComponent(trailerId)}` : null;
 
   return (
     <section className="relative">
@@ -40,27 +43,31 @@ export default function Hero({ item }) {
               <p className="text-sm leading-relaxed opacity-80">{item.synopsis}</p>
             ) : null}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2">
               <Link
-                href={href}
+                href={watchHref}
                 className="inline-flex items-center justify-center rounded bg-white px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
                 prefetch={false}
               >
-                ▶ Watch
+                ▶ Watch Feature
               </Link>
 
-              {item?.poster ? (
-                <div className="hidden md:block">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.poster}
-                    alt={item?.title ?? "Poster"}
-                    className="h-16 w-auto rounded object-cover opacity-90"
-                    loading="lazy"
-                  />
-                </div>
+              {trailerHref ? (
+                <Link
+                  href={trailerHref}
+                  className="inline-flex items-center justify-center rounded border border-white/30 bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15"
+                  prefetch={false}
+                >
+                  🎬 Play Trailer
+                </Link>
               ) : null}
             </div>
+
+            {trailerHref && item?.trailerTitle ? (
+              <div className="text-xs opacity-70">
+                Trailer: {item.trailerTitle}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
