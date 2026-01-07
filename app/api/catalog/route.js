@@ -32,11 +32,6 @@ function isTrailerItem(item) {
   return hay.includes("trailer");
 }
 
-function pickFeatured(items) {
-  const features = items.filter((x) => !isTrailerItem(x));
-  return features[0] || items[0] || null;
-}
-
 function normalizeTokens(str) {
   return String(str || "")
     .toLowerCase()
@@ -61,13 +56,6 @@ function bestMatchingTrailer(featureItem, trailers) {
     let score = 0;
     for (const tok of tt) if (ft.has(tok)) score += 1;
 
-    // small bonus if public_id shares a chunk
-    const fid = String(featureItem.id || "").toLowerCase();
-    const tid = String(tr.id || "").toLowerCase();
-    if (fid && tid && (tid.includes(fid.replace(/_[a-z0-9]{6,}$/i, "")) || fid.includes(tid.replace(/_[a-z0-9]{6,}$/i, "")))) {
-      score += 2;
-    }
-
     if (score > bestScore) {
       bestScore = score;
       best = tr;
@@ -75,6 +63,11 @@ function bestMatchingTrailer(featureItem, trailers) {
   }
 
   return best;
+}
+
+function pickById(items, id) {
+  if (!id) return null;
+  return items.find((x) => x?.id === id || x?.watchId === id) || null;
 }
 
 // GET /api/catalog
@@ -85,6 +78,10 @@ export async function GET() {
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   const prefix = process.env.CLOUDINARY_FOLDER || "aiv-films";
+
+  // Pin hero/trailer explicitly (best for launch)
+  const pinnedFeaturedId = process.env.AIV_FEATURED_ID || "";
+  const pinnedTrailerId = process.env.AIV_FEATURED_TRAILER_ID || "";
 
   if (!cloudName) {
     return NextResponse.json(
@@ -125,6 +122,7 @@ export async function GET() {
 
   const resources = Array.isArray(data.resources) ? data.resources : [];
 
+  // Newest-first by created_at
   const items = resources
     .map((r) => {
       const watchId = r.public_id;
@@ -144,9 +142,7 @@ export async function GET() {
     .sort((a, b) => (a._created_at < b._created_at ? 1 : a._created_at > b._created_at ? -1 : a.id < b.id ? 1 : -1))
     .map(({ _created_at, ...rest }) => rest);
 
-  const featured = pickFeatured(items);
-
-  if (!featured) {
+  if (!items.length) {
     const emptyCatalog = {
       hero: {
         id: "empty",
@@ -158,6 +154,8 @@ export async function GET() {
         tags: ["AIV"],
         poster: "",
         backdrop: "",
+        trailerId: null,
+        trailerTitle: null,
       },
       rows: [],
     };
@@ -167,7 +165,16 @@ export async function GET() {
   const trailers = items.filter(isTrailerItem);
   const features = items.filter((x) => !isTrailerItem(x));
 
-  const heroTrailer = bestMatchingTrailer(featured, trailers);
+  // Featured selection: pinned -> newest feature -> newest item
+  const featured =
+    pickById(items, pinnedFeaturedId) ||
+    (features.length ? features[0] : items[0]);
+
+  // Trailer selection: pinned -> best match -> newest trailer
+  const heroTrailer =
+    pickById(items, pinnedTrailerId) ||
+    bestMatchingTrailer(featured, trailers) ||
+    (trailers.length ? trailers[0] : null);
 
   const hero = {
     ...featured,
