@@ -1,20 +1,14 @@
+export const dynamic = "force-dynamic";
+
 import Nav from "./components/Nav";
 import Hero from "./components/Hero";
 import Row from "./components/Row";
 
 async function getCatalogResponse() {
-  const base =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
   try {
-    const res = await fetch(`${base}/api/catalog`, { cache: "no-store" });
-
-    if (!res.ok) {
-      console.error("Failed to load /api/catalog:", res.status, res.statusText);
-      return null;
-    }
-
+    // Relative URL avoids localhost issues in build/production
+    const res = await fetch("/api/catalog", { cache: "no-store" });
+    if (!res.ok) return null;
     return await res.json();
   } catch (err) {
     console.error("Catalog fetch error:", err);
@@ -24,9 +18,6 @@ async function getCatalogResponse() {
 
 export default async function Home() {
   const data = await getCatalogResponse();
-
-  // Your API returns: { catalog: { hero, rows }, count, prefix }
-  // This unwraps it safely:
   const catalog = data?.catalog ?? null;
 
   return (
