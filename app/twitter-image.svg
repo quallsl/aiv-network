@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#000"/>
+  <text x="80" y="290" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="92" font-weight="900" fill="#fff">
+    AIV
+  </text>
+  <text x="80" y="380" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="42" fill="rgba(255,255,255,0.82)">
+    Network
+  </text>
+  <rect x="80" y="420" width="520" height="10" rx="5" fill="rgba(255,255,255,0.18)"/>
+</svg>
