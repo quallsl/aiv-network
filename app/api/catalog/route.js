@@ -1,195 +1,92 @@
-import { NextResponse } from "next/server";
+import { getCloudinary } from "../../../lib/cloudinary";
 
-function b64(str) {
-  return Buffer.from(str, "utf8").toString("base64");
+export const runtime = "nodejs";
+
+function toTitle(publicId) {
+  const base = publicId.split("/").pop();
+  return base.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function prettifyTitle(publicId) {
-  const last = publicId.split("/").pop() || publicId;
-  const noHash = last.replace(/_[a-z0-9]{6,}$/i, "");
-  return noHash
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+function videoUrl(cloud, publicId) {
+  return `https://res.cloudinary.com/${cloud}/video/upload/f_mp4,vc_h264/${publicId}`;
 }
 
-function durationText(seconds) {
-  if (!Number.isFinite(seconds) || seconds <= 0) return "";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${String(s).padStart(2, "0")}`;
+function posterUrl(cloud, publicId) {
+  return `https://res.cloudinary.com/${cloud}/video/upload/so_2,f_jpg,q_auto:good,w_640/${publicId}.jpg`;
 }
 
-function posterFromVideo(cloudName, watchId) {
-  return `https://res.cloudinary.com/${cloudName}/video/upload/so_0,c_fill,w_600,h_900,q_auto,f_auto/${watchId}.jpg`;
-}
-
-function backdropFromVideo(cloudName, watchId) {
-  return `https://res.cloudinary.com/${cloudName}/video/upload/so_0,c_fill,w_1600,h_900,q_auto,f_auto/${watchId}.jpg`;
-}
-
-function isTrailerItem(item) {
-  const hay = `${item?.id ?? ""} ${item?.title ?? ""}`.toLowerCase();
-  return hay.includes("trailer");
-}
-
-function normalizeTokens(str) {
-  return String(str || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter(Boolean)
-    .filter((t) => t !== "aiv" && t !== "films" && t !== "original" && t !== "trailer");
-}
-
-function bestMatchingTrailer(featureItem, trailers) {
-  if (!featureItem || !Array.isArray(trailers) || trailers.length === 0) return null;
-  if (trailers.length === 1) return trailers[0];
-
-  const ft = new Set(normalizeTokens(featureItem.title));
-  if (ft.size === 0) return trailers[0];
-
-  let best = trailers[0];
-  let bestScore = -1;
-
-  for (const tr of trailers) {
-    const tt = normalizeTokens(tr.title);
-    let score = 0;
-    for (const tok of tt) if (ft.has(tok)) score += 1;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = tr;
-    }
-  }
-
-  return best;
-}
-
-function pickById(items, id) {
-  if (!id) return null;
-  return items.find((x) => x?.id === id || x?.watchId === id) || null;
-}
-
-// GET /api/catalog
-export async function GET() {
-  const cloudName =
-    process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-
-  const prefix = process.env.CLOUDINARY_FOLDER || "aiv-films";
-
-  // Pin hero/trailer explicitly (best for launch)
-  const pinnedFeaturedId = process.env.AIV_FEATURED_ID || "";
-  const pinnedTrailerId = process.env.AIV_FEATURED_TRAILER_ID || "";
-
-  if (!cloudName) {
-    return NextResponse.json(
-      { error: "Missing CLOUDINARY_CLOUD_NAME (or NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME)" },
-      { status: 500 }
-    );
-  }
-
-  if (!apiKey || !apiSecret) {
-    return NextResponse.json(
-      {
-        error:
-          "Missing CLOUDINARY_API_KEY or CLOUDINARY_API_SECRET. Add these to .env.local and Vercel (server-side env vars).",
-      },
-      { status: 500 }
-    );
-  }
-
-  const auth = `Basic ${b64(`${apiKey}:${apiSecret}`)}`;
-
-  const url =
-    `https://api.cloudinary.com/v1_1/${cloudName}/resources/video` +
-    `?prefix=${encodeURIComponent(prefix)}` +
-    `&max_results=100` +
-    `&resource_type=video` +
-    `&type=upload`;
-
-  const res = await fetch(url, {
-    headers: { Authorization: auth },
-    cache: "no-store",
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    return NextResponse.json({ error: "Cloudinary API error", details: data }, { status: res.status });
-  }
-
-  const resources = Array.isArray(data.resources) ? data.resources : [];
-
-  // Newest-first by created_at
-  const items = resources
-    .map((r) => {
-      const watchId = r.public_id;
-      const title = prettifyTitle(watchId);
-      return {
-        id: watchId,
-        watchId,
-        title,
-        year: (r.created_at || "").slice(0, 4),
-        duration: durationText(r.duration),
-        tags: ["AIV", "Original"],
-        poster: posterFromVideo(cloudName, watchId),
-        backdrop: backdropFromVideo(cloudName, watchId),
-        _created_at: r.created_at || "",
-      };
-    })
-    .sort((a, b) => (a._created_at < b._created_at ? 1 : a._created_at > b._created_at ? -1 : a.id < b.id ? 1 : -1))
-    .map(({ _created_at, ...rest }) => rest);
-
-  if (!items.length) {
-    const emptyCatalog = {
-      hero: {
-        id: "empty",
-        watchId: "",
-        title: "Upload a video to Cloudinary",
-        synopsis: `No videos found under prefix "${prefix}".`,
-        year: "",
-        duration: "",
-        tags: ["AIV"],
-        poster: "",
-        backdrop: "",
-        trailerId: null,
-        trailerTitle: null,
-      },
-      rows: [],
-    };
-    return NextResponse.json({ catalog: emptyCatalog, count: 0, prefix });
-  }
-
-  const trailers = items.filter(isTrailerItem);
-  const features = items.filter((x) => !isTrailerItem(x));
-
-  // Featured selection: pinned -> newest feature -> newest item
-  const featured =
-    pickById(items, pinnedFeaturedId) ||
-    (features.length ? features[0] : items[0]);
-
-  // Trailer selection: pinned -> best match -> newest trailer
-  const heroTrailer =
-    pickById(items, pinnedTrailerId) ||
-    bestMatchingTrailer(featured, trailers) ||
-    (trailers.length ? trailers[0] : null);
-
-  const hero = {
-    ...featured,
-    trailerId: heroTrailer?.watchId || heroTrailer?.id || null,
-    trailerTitle: heroTrailer?.title || null,
-    synopsis:
-      "Now streaming on AIV Network. Upload more films to your Cloudinary folder to expand your catalog.",
+function toItem(cloud, publicId, kind) {
+  if (!publicId) return null;
+  return {
+    id: publicId,
+    title: toTitle(publicId),
+    publicId,
+    kind, // "film" | "trailer"
+    poster: posterUrl(cloud, publicId),
+    video: videoUrl(cloud, publicId),
   };
+}
 
-  const rows = [];
-  rows.push({ title: "Featured", items: [featured] });
-  if (trailers.length) rows.push({ title: "Trailers", items: trailers });
-  if (features.length) rows.push({ title: "AIV Originals", items: features });
+export async function GET() {
+  const cloud = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const folder = (process.env.CLOUDINARY_FOLDER || "aiv-films").trim();
 
-  const catalog = { hero, rows };
+  const pinnedFeatured = (process.env.NEXT_PUBLIC_AIV_FEATURED_ID || "").trim();
+  const pinnedTrailer = (process.env.NEXT_PUBLIC_AIV_TRAILER_ID || "").trim();
 
-  return NextResponse.json({ catalog, count: items.length, prefix });
+  try {
+    const cld = getCloudinary();
+
+    const res = await cld.search
+      .expression(`resource_type:video AND folder:${folder}`)
+      .sort_by("created_at", "desc")
+      .max_results(80)
+      .execute();
+
+    const assets = (res?.resources || []).map((r) => {
+      const publicId = r.public_id;
+      const isTrailer = /trailer/i.test(publicId) || publicId === pinnedTrailer;
+      return {
+        id: publicId,
+        title: toTitle(publicId),
+        publicId,
+        kind: isTrailer ? "trailer" : "film",
+        duration: r.duration || null,
+        createdAt: r.created_at || null,
+        poster: posterUrl(cloud, publicId),
+        video: videoUrl(cloud, publicId),
+      };
+    });
+
+    const featuredPinnedItem = toItem(cloud, pinnedFeatured, "film");
+    const trailerPinnedItem = toItem(cloud, pinnedTrailer, "trailer");
+
+    const trailers = assets.filter((a) => a.kind === "trailer");
+    const films = assets.filter((a) => a.kind === "film");
+
+    const featured = featuredPinnedItem || films[0] || assets[0] || null;
+
+    const trailersRowItems = [
+      ...(trailerPinnedItem ? [trailerPinnedItem] : []),
+      ...trailers.filter((a) => a.publicId !== pinnedTrailer),
+    ];
+
+    return Response.json({
+      ok: true,
+      cloudinaryCloudName: cloud,
+      folder,
+      featured,
+      pinned: { featured: pinnedFeatured || null, trailer: pinnedTrailer || null },
+      rows: [
+        { id: "featured", title: "Featured", items: featured ? [featured] : [] },
+        { id: "trailers", title: "Trailers", items: trailersRowItems },
+        { id: "films", title: "AIV Originals", items: films },
+      ],
+    });
+  } catch (e) {
+    return Response.json(
+      { ok: false, error: String(e?.message || e) },
+      { status: 500 }
+    );
+  }
 }
