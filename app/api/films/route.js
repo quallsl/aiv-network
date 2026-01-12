@@ -1,11 +1,16 @@
 export const runtime = "nodejs";
 
-export async function GET() {
-  const cloud =
-    (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+function pickEnv(name, fallback = "") {
+  return process.env[name] || fallback;
+}
 
-  const featuredPublicId = (process.env.NEXT_PUBLIC_AIV_FEATURED_ID || "").trim();
-  const trailerPublicId = (process.env.NEXT_PUBLIC_AIV_TRAILER_ID || "").trim();
+export async function GET() {
+  const cloudinaryCloudName =
+    pickEnv("CLOUDINARY_CLOUD_NAME") ||
+    pickEnv("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
+
+  const featuredPublicId = pickEnv("NEXT_PUBLIC_AIV_FEATURED_ID", "wonderboy");
+  const trailerPublicId = pickEnv("NEXT_PUBLIC_AIV_TRAILER_ID", "aiv-films-wonderboy-trailer_vae68x");
 
   return Response.json({
     ok: true,
@@ -13,10 +18,10 @@ export async function GET() {
       {
         id: "wonderboy",
         title: "Wonderboy",
-        cloudinaryCloudName: cloud,
+        cloudinaryCloudName,
         featuredPublicId,
-        trailerPublicId
-      }
-    ]
+        trailerPublicId,
+      },
+    ],
   });
 }
