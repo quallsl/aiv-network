@@ -2,60 +2,51 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-function cloudinaryVideoUrl(cloudName, publicId) {
-  if (!cloudName || !publicId) return null
-  // publicId should NOT include file extension; we append .mp4 for consistency
-  return `https://res.cloudinary.com/${cloudName}/video/upload/${publicId}.mp4`
-}
-
-function cloudinaryImageUrl(cloudName, publicId) {
-  if (!cloudName || !publicId) return null
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${publicId}.jpg`
-}
-
-function Row({ title, items }) {
-  if (!items || items.length === 0) return null
+function Row({ title, items, onPlay }) {
   return (
-    <section style={{ marginTop: 22 }}>
-      <h2 style={{ padding: "0 24px", fontSize: 18, fontWeight: 700 }}>{title}</h2>
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          overflowX: "auto",
-          padding: "10px 24px 6px",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
+    <section style={{ marginTop: 28 }}>
+      <h2 style={{ padding: "0 24px", fontSize: 22, fontWeight: 700 }}>{title}</h2>
+
+      <div style={{ display: "flex", gap: 16, padding: "14px 24px", overflowX: "auto" }}>
         {items.map((it) => (
           <div
-            key={it.id || it.publicId || it.title}
+            key={it.id}
+            role="button"
+            tabIndex={0}
             style={{
-              minWidth: 160,
-              width: 160,
+              minWidth: 180,
+              height: 260,
               borderRadius: 12,
-              overflow: "hidden",
-              background: "rgba(255,255,255,0.06)",
+              backgroundImage: it.poster ? `url(${it.poster})` : "linear-gradient(135deg, #333, #000)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              position: "relative",
               cursor: "pointer",
-              transform: "translateZ(0)",
+              transition: "transform 0.25s ease",
+              outline: "none",
             }}
-            title={it.title || it.id}
+            onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.08)")}
+            onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+            onClick={() => onPlay(it)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") onPlay(it)
+            }}
           >
-            {it.posterUrl ? (
-              <img
-                src={it.posterUrl}
-                alt={it.title || "Poster"}
-                style={{ width: "100%", height: 240, objectFit: "cover", display: "block" }}
-              />
-            ) : (
-              <div style={{ width: "100%", height: 240, display: "grid", placeItems: "center" }}>
-                <span style={{ opacity: 0.7, fontSize: 12 }}>No poster</span>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.15) 60%, transparent)",
+                borderRadius: 12,
+              }}
+            />
+
+            <div style={{ position: "absolute", bottom: 12, left: 12, right: 12 }}>
+              <div style={{ fontWeight: 800, textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
+                {it.title}
               </div>
-            )}
-            <div style={{ padding: 10 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: "16px" }}>
-                {it.title || it.id}
-              </div>
+              <div style={{ fontSize: 12, opacity: 0.9 }}>▶ Play</div>
             </div>
           </div>
         ))}
@@ -64,102 +55,145 @@ function Row({ title, items }) {
   )
 }
 
+function ModalPlayer({ open, title, videoUrl, posterUrl, onClose }) {
+  // ESC to close + lock background scroll
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [open, onClose])
+
+  if (!open) return null
+
+  return (
+    <div
+      aria-modal="true"
+      role="dialog"
+      onMouseDown={(e) => {
+        // click outside to close
+        if (e.target === e.currentTarget) onClose()
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(0,0,0,0.82)",
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          width: "min(1100px, 96vw)",
+          borderRadius: 16,
+          overflow: "hidden",
+          background: "#000",
+          boxShadow: "0 20px 80px rgba(0,0,0,0.65)",
+        }}
+      >
+        {/* Top bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 14px",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div style={{ fontWeight: 800, color: "white", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {title}
+          </div>
+
+          <button
+            onClick={onClose}
+            style={{
+              appearance: "none",
+              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(255,255,255,0.08)",
+              color: "white",
+              padding: "8px 10px",
+              borderRadius: 10,
+              cursor: "pointer",
+              fontWeight: 800,
+            }}
+          >
+            ✕ Close
+          </button>
+        </div>
+
+        {/* Video */}
+        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", background: "#000" }}>
+          <video
+            src={videoUrl}
+            poster={posterUrl || undefined}
+            controls
+            autoPlay
+            playsInline
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HomePage() {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ""
-  const trailerPublicId = process.env.NEXT_PUBLIC_AIV_FEATURED_TRAILER_ID || ""
-  const featuredTitle = process.env.NEXT_PUBLIC_AIV_FEATURED_TITLE || "Wonderboy"
-  const featuredTagline =
-    process.env.NEXT_PUBLIC_AIV_FEATURED_TAGLINE || "An AI-generated cinematic experiment."
+  const [api, setApi] = useState(null)
 
-  // Optional poster publicId if you have one; leave blank if not.
-  const posterPublicId = process.env.NEXT_PUBLIC_AIV_FEATURED_POSTER_ID || ""
-
-  const heroVideo = useMemo(
-    () => cloudinaryVideoUrl(cloudName, trailerPublicId),
-    [cloudName, trailerPublicId]
-  )
-
-  const heroPoster = useMemo(
-    () => cloudinaryImageUrl(cloudName, posterPublicId),
-    [cloudName, posterPublicId]
-  )
-
-  const [rows, setRows] = useState([])
+  // modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activeTitle, setActiveTitle] = useState("Wonderboy")
+  const [activeVideoUrl, setActiveVideoUrl] = useState("")
+  const [activePosterUrl, setActivePosterUrl] = useState("")
 
   useEffect(() => {
-    let isMounted = true
-    ;(async () => {
-      try {
-        const res = await fetch("/api/films", { cache: "no-store" })
-        const json = await res.json()
+    fetch("/api/films", { cache: "no-store" })
+      .then((r) => r.json())
+      .then(setApi)
+      .catch(() => {})
+  }, [])
 
-        // Try multiple shapes safely
-        const apiRows =
-          json?.catalog?.rows ||
-          json?.rows ||
-          json?.data?.rows ||
-          []
+  // Prefer exact working URL from env (your proven good URL)
+  const trailerUrl = process.env.NEXT_PUBLIC_AIV_FEATURED_TRAILER_URL || ""
 
-        // Normalize items -> posterUrl if possible
-        const normalized = Array.isArray(apiRows)
-          ? apiRows.map((r) => {
-              const items = Array.isArray(r.items) ? r.items : []
-              return {
-                title: r.title || r.name || "Row",
-                items: items.map((it) => ({
-                  ...it,
-                  // try common fields for poster public id
-                  posterUrl:
-                    it.posterUrl ||
-                    (cloudName && it.poster
-                      ? cloudinaryImageUrl(cloudName, it.poster)
-                      : null) ||
-                    (cloudName && it.posterPublicId
-                      ? cloudinaryImageUrl(cloudName, it.posterPublicId)
-                      : null) ||
-                    null,
-                })),
-              }
-            })
-          : []
+  // Poster = a thumbnail derived from the trailer URL
+  const trailerPoster = useMemo(() => {
+    if (!trailerUrl) return ""
+    return trailerUrl.replace(/\.mp4(\?.*)?$/i, ".jpg")
+  }, [trailerUrl])
 
-        if (isMounted) setRows(normalized)
-      } catch {
-        // If API fails, keep rows empty (no crash)
-        if (isMounted) setRows([])
-      }
-    })()
-    return () => {
-      isMounted = false
-    }
-  }, [cloudName])
+  const items = useMemo(
+    () => [{ id: "wonderboy", title: "Wonderboy", poster: trailerPoster, video: trailerUrl }],
+    [trailerPoster, trailerUrl]
+  )
 
-  // Fallback demo rows if API returns nothing (keeps “Netflix feel”)
-  const fallbackRows = [
-    {
-      title: "Featured",
-      items: [
-        {
-          id: "featured",
-          title: featuredTitle,
-          posterUrl: heroPoster,
-        },
-      ],
-    },
-  ]
-
-  const renderRows = rows.length > 0 ? rows : fallbackRows
+  const openPlayer = (item) => {
+    setActiveTitle(item?.title || "Wonderboy")
+    setActiveVideoUrl(item?.video || trailerUrl)
+    setActivePosterUrl(item?.poster || trailerPoster)
+    setModalOpen(true)
+  }
 
   return (
     <main style={{ background: "black", color: "white", minHeight: "100vh" }}>
       {/* HERO */}
       <section style={{ position: "relative", height: "92vh", overflow: "hidden" }}>
-        {/* HERO VIDEO (bulletproof: never renders if heroVideo is empty) */}
-        {typeof heroVideo === "string" && heroVideo.length > 0 && (
+        {trailerUrl ? (
           <video
-            key={heroVideo}
-            src={heroVideo}
-            poster={heroPoster || undefined}
+            src={trailerUrl}
+            poster={trailerPoster || undefined}
             autoPlay
             muted
             loop
@@ -173,75 +207,71 @@ export default function HomePage() {
               objectFit: "cover",
             }}
           />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, background: "black" }} />
         )}
 
-        {/* Overlays */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             background:
-              "linear-gradient(to top, rgba(0,0,0,0.92) 10%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.1) 100%)",
+              "linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.45) 60%, transparent)",
           }}
         />
-        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.18)" }} />
 
-        {/* Hero Content */}
-        <div style={{ position: "relative", zIndex: 2, maxWidth: 720, padding: "0 24px" }}>
-          <div style={{ height: 90 }} />
-          <h1 style={{ fontSize: 56, lineHeight: "58px", fontWeight: 900, margin: 0 }}>
-            {featuredTitle}
-          </h1>
-          <p style={{ marginTop: 14, fontSize: 18, opacity: 0.9, maxWidth: 560 }}>
-            {featuredTagline}
+        <div style={{ position: "relative", padding: "120px 24px", maxWidth: 720 }}>
+          <h1 style={{ fontSize: 64, fontWeight: 900, margin: 0 }}>Wonderboy</h1>
+          <p style={{ marginTop: 12, fontSize: 18, marginBottom: 0, opacity: 0.92 }}>
+            An AI-generated cinematic experiment.
           </p>
 
-          <div style={{ marginTop: 18, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
             <button
+              onClick={() => openPlayer(items[0])}
               style={{
+                padding: "12px 20px",
+                fontWeight: 900,
+                borderRadius: 10,
+                border: "none",
                 background: "white",
                 color: "black",
-                border: "none",
-                padding: "12px 18px",
-                borderRadius: 10,
-                fontWeight: 800,
                 cursor: "pointer",
-              }}
-              onClick={() => {
-                // simple: scroll a bit to rows; you can wire this to a player/modal later
-                window.scrollTo({ top: window.innerHeight * 0.85, behavior: "smooth" })
               }}
             >
               ▶ Play
             </button>
 
             <button
+              onClick={() => alert("Wonderboy\n\nAn AI-generated cinematic experiment.")}
               style={{
-                background: "rgba(120,120,120,0.35)",
-                color: "white",
-                border: "1px solid rgba(255,255,255,0.18)",
-                padding: "12px 18px",
+                padding: "12px 20px",
+                fontWeight: 900,
                 borderRadius: 10,
-                fontWeight: 800,
+                border: "1px solid rgba(255,255,255,0.18)",
+                background: "rgba(255,255,255,0.10)",
+                color: "white",
                 cursor: "pointer",
               }}
-              onClick={() => alert(`${featuredTitle}\n\n${featuredTagline}`)}
             >
               More Info
             </button>
           </div>
         </div>
-
-        {/* Bottom fade into rows */}
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: -1, height: 140, background: "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 95%)" }} />
       </section>
 
       {/* ROWS */}
-      <div style={{ paddingBottom: 40 }}>
-        {renderRows.map((r) => (
-          <Row key={r.title} title={r.title} items={r.items} />
-        ))}
-      </div>
+      <Row title="Featured" items={items} onPlay={openPlayer} />
+      <Row title="Trailers" items={items} onPlay={openPlayer} />
+      <Row title="AIV Originals" items={items} onPlay={openPlayer} />
+
+      <ModalPlayer
+        open={modalOpen}
+        title={activeTitle}
+        videoUrl={activeVideoUrl}
+        posterUrl={activePosterUrl}
+        onClose={() => setModalOpen(false)}
+      />
     </main>
   )
 }
