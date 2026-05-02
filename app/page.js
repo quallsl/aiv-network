@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from "react"
-
+import Link from "next/link";
 function Row({ title, items, onPlay }) {
   if (!items?.length) return null
 
@@ -224,7 +224,7 @@ export default function HomePage() {
             Wonderboy
           </h1>
           <p style={{ marginTop: 12, fontSize: 18, marginBottom: 0, opacity: 0.92 }}>
-            An AI-generated cinematic experiment.
+            An AI-generated cinematic experience.
           </p>
 
           <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -239,10 +239,23 @@ export default function HomePage() {
                 color: "black",
                 cursor: "pointer",
               }}
-            >
+            <button>>
               ▶ Play Feature
             </button>
-
+            <Link href="/submit">
+              <button
+                style={{
+                  background: "white",
+                  color: "black",
+                  padding: "10px 16px",
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+              >
+                + Submit Film
+              </button>
+            </Link>
             <button
               onClick={() => openPlayer(trailerItem)}
               style={{
