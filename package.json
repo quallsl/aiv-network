@@ -12,15 +12,16 @@
     "cloudinary": "^2.8.0",
     "next": "16.0.10",
     "react": "^19.2.1",
-    "react-dom": "^19.2.1"
-    "resend": "latest",
+    "react-dom": "^19.2.1",
+    "resend": "latest"
   },
-   "devDependencies": {
-  "@tailwindcss/postcss": "^4",
-  "babel-plugin-react-compiler": "1.0.0",
-  "eslint": "^9",
-  "eslint-config-next": "16.0.10",
-  "tailwindcss": "^4",
-  "@types/node": "latest",
-  "@types/react": "latest"
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.10",
+    "tailwindcss": "^4",
+    "@types/node": "latest",
+    "@types/react": "latest"
+  }
 }
