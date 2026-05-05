@@ -26,9 +26,9 @@ export default async function WatchPage({ params }) {
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="px-4 py-4 md:px-10 flex items-center gap-3">
-        <Link href="/" className="text-sm opacity-80 hover:opacity-100">
-          ← Back
-        </Link>
+        <Link href="/" className="text-sm opacity-80 hover:opacity-100">← Back</Link>
+        <Link href="/catalog" className="text-sm opacity-80 hover:opacity-100">Catalog</Link>
+        <Link href="/submit" className="text-sm opacity-80 hover:opacity-100">Submit</Link>
         <div className="text-sm opacity-80 truncate">{decodedPath}</div>
       </div>
 

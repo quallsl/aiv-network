@@ -187,7 +187,16 @@ export default function HomePage() {
   };
 
   return (
-    <main style={{ background: "black", color: "white", minHeight: "100vh" }}>
+        <main style={{ background: "black", color: "white", minHeight: "100vh" }}>
+      <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 20, borderBottom: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px" }}>
+          <div style={{ fontWeight: 800, letterSpacing: ".04em" }}>AIV Network</div>
+          <div style={{ display: "flex", gap: 14 }}>
+            <Link href="/catalog" style={{ color: "white", opacity: 0.85 }}>Catalog</Link>
+            <Link href="/submit" style={{ color: "white", opacity: 0.85 }}>Submit</Link>
+          </div>
+        </div>
+      </header>
       <section style={{ position: "relative", height: "92vh", overflow: "hidden" }}>
         {trailerUrl ? (
           <video

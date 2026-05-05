@@ -8,7 +8,7 @@ export async function POST(req) {
     if (!resendApiKey) {
       console.error("Missing RESEND_API_KEY");
       return NextResponse.json(
-        { success: false, message: "Missing email configuration" },
+        { success: false, message: "Submission service is not configured yet. Please add RESEND_API_KEY." },
         { status: 500 }
       );
     }
