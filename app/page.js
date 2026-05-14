@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 
 function Row({ title, items, onPlay }) {
-  if (!items?.length) return null
+  if (!items?.length) return null;
 
   return (
     <section style={{ marginTop: 28 }}>
@@ -32,15 +33,14 @@ function Row({ title, items, onPlay }) {
             onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
             onClick={() => onPlay(it)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") onPlay(it)
+              if (e.key === "Enter" || e.key === " ") onPlay(it);
             }}
           >
             <div
               style={{
                 position: "absolute",
                 inset: 0,
-                background:
-                  "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.15) 60%, transparent)",
+                background: "linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.15) 60%, transparent)",
                 borderRadius: 12,
               }}
             />
@@ -54,34 +54,36 @@ function Row({ title, items, onPlay }) {
         ))}
       </div>
     </section>
-  )
+  );
 }
 
 function ModalPlayer({ open, title, videoUrl, posterUrl, onClose }) {
   useEffect(() => {
-    if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = "hidden"
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     const onKey = (e) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", onKey)
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", onKey);
 
     return () => {
-      document.body.style.overflow = prev
-      window.removeEventListener("keydown", onKey)
-    }
-  }, [open, onClose])
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
       aria-modal="true"
       role="dialog"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose()
+        if (e.target === e.currentTarget) onClose();
       }}
       style={{
         position: "fixed",
@@ -140,22 +142,22 @@ function ModalPlayer({ open, title, videoUrl, posterUrl, onClose }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function HomePage() {
-  const [modalOpen, setModalOpen] = useState(false)
-  const [activeTitle, setActiveTitle] = useState("Wonderboy")
-  const [activeVideoUrl, setActiveVideoUrl] = useState("")
-  const [activePosterUrl, setActivePosterUrl] = useState("")
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeTitle, setActiveTitle] = useState("Wonderboy");
+  const [activeVideoUrl, setActiveVideoUrl] = useState("");
+  const [activePosterUrl, setActivePosterUrl] = useState("");
 
-  const trailerUrl = process.env.NEXT_PUBLIC_AIV_FEATURED_TRAILER_URL || ""
-  const featureUrl = process.env.NEXT_PUBLIC_AIV_FEATURED_FEATURE_URL || ""
+  const trailerUrl = process.env.NEXT_PUBLIC_AIV_FEATURED_TRAILER_URL || "";
+  const featureUrl = process.env.NEXT_PUBLIC_AIV_FEATURED_FEATURE_URL || "";
 
-  const posterFromVideo = (url) => (url ? url.replace(/\.mp4(\?.*)?$/i, ".jpg") : "")
+  const posterFromVideo = (url) => (url ? url.replace(/\.mp4(\?.*)?$/i, ".jpg") : "");
 
-  const trailerPoster = useMemo(() => posterFromVideo(trailerUrl), [trailerUrl])
-  const featurePoster = useMemo(() => posterFromVideo(featureUrl) || trailerPoster, [featureUrl, trailerPoster])
+  const trailerPoster = useMemo(() => posterFromVideo(trailerUrl), [trailerUrl]);
+  const featurePoster = useMemo(() => posterFromVideo(featureUrl) || trailerPoster, [featureUrl, trailerPoster]);
 
   const featuredItem = useMemo(
     () => ({
@@ -165,7 +167,7 @@ export default function HomePage() {
       video: featureUrl,
     }),
     [featurePoster, featureUrl]
-  )
+  );
 
   const trailerItem = useMemo(
     () => ({
@@ -175,18 +177,26 @@ export default function HomePage() {
       video: trailerUrl,
     }),
     [trailerPoster, trailerUrl]
-  )
+  );
 
   const openPlayer = (item) => {
-    setActiveTitle(item?.title || "Wonderboy")
-    setActiveVideoUrl(item?.video || "")
-    setActivePosterUrl(item?.poster || "")
-    setModalOpen(true)
-  }
+    setActiveTitle(item?.title || "Wonderboy");
+    setActiveVideoUrl(item?.video || "");
+    setActivePosterUrl(item?.poster || "");
+    setModalOpen(true);
+  };
 
   return (
-    <main style={{ background: "black", color: "white", minHeight: "100vh" }}>
-      {/* HERO background uses TRAILER */}
+        <main style={{ background: "black", color: "white", minHeight: "100vh" }}>
+      <header style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 20, borderBottom: "1px solid rgba(255,255,255,0.12)", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 24px" }}>
+          <div style={{ fontWeight: 800, letterSpacing: ".04em" }}>AIV Network</div>
+          <div style={{ display: "flex", gap: 14 }}>
+            <Link href="/catalog" style={{ color: "white", opacity: 0.85 }}>Catalog</Link>
+            <Link href="/submit" style={{ color: "white", opacity: 0.85 }}>Submit</Link>
+          </div>
+        </div>
+      </header>
       <section style={{ position: "relative", height: "92vh", overflow: "hidden" }}>
         {trailerUrl ? (
           <video
@@ -214,8 +224,7 @@ export default function HomePage() {
           style={{
             position: "absolute",
             inset: 0,
-            background:
-              "linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.45) 60%, transparent)",
+            background: "linear-gradient(to top, rgba(0,0,0,0.96), rgba(0,0,0,0.45) 60%, transparent)",
           }}
         />
 
@@ -223,8 +232,9 @@ export default function HomePage() {
           <h1 style={{ fontSize: 64, fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>
             Wonderboy
           </h1>
+
           <p style={{ marginTop: 12, fontSize: 18, marginBottom: 0, opacity: 0.92 }}>
-            An AI-generated cinematic experiment.
+            An AI-generated cinematic experience.
           </p>
 
           <div style={{ marginTop: 20, display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -242,6 +252,22 @@ export default function HomePage() {
             >
               ▶ Play Feature
             </button>
+
+            <Link href="/submit">
+              <button
+                style={{
+                  background: "white",
+                  color: "black",
+                  padding: "12px 20px",
+                  borderRadius: 10,
+                  border: "none",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                + Submit Film
+              </button>
+            </Link>
 
             <button
               onClick={() => openPlayer(trailerItem)}
@@ -299,5 +325,5 @@ export default function HomePage() {
         onClose={() => setModalOpen(false)}
       />
     </main>
-  )
+  );
 }
