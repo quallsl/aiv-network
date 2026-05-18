@@ -1,43 +1,23 @@
-export const runtime = "nodejs";
-
-function env(...keys) {
-  for (const k of keys) {
-    const v = process.env[k];
-    if (v && String(v).trim()) return String(v).trim();
-  }
-  return "";
-}
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET() {
-  const cloudinaryCloudName = env(
-    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
-    "CLOUDINARY_CLOUD_NAME"
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
 
-  const featuredPublicId = env(
-    "NEXT_PUBLIC_AIV_FEATURED_ID",
-    "AIV_FEATURED_ID"
-  );
+  const { data, error } = await supabase
+    .from("films")
+    .select("*");
 
-  const trailerPublicId = env(
-    "NEXT_PUBLIC_AIV_TRAILER_ID",
-    "AIV_TRAILER_ID"
-  );
+  if (error) {
+    console.error("Supabase error:", error);
+    return new Response(JSON.stringify({ error }), { status: 500 });
+  }
 
-  return Response.json({
-    ok: true,
-    version: "films-route-v3-2026-01-12",
-    cloudinaryCloudName,
-    featuredPublicId,
-    trailerPublicId,
-    films: [
-      {
-        id: featuredPublicId || "wonderboy",
-        title: "Featured",
-        cloudinaryCloudName,
-        featuredPublicId,
-        trailerPublicId,
-      },
-    ],
+  console.log("Supabase data:", data);
+
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
   });
 }
