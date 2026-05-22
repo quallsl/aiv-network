@@ -1,78 +1,126 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
 
 export default function SubmitPage() {
   const [title, setTitle] = useState("");
   const [creator, setCreator] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.from("films").insert([
-      {
-        title,
-        creator,
-        video_url: videoUrl,
-        thumbnail_url: thumbnailUrl,
-      },
-    ]);
+    const isYouTube =
+      videoUrl.includes("youtube.com") ||
+      videoUrl.includes("youtu.be");
 
-    if (error) {
-      alert(error.message);
+    const isVimeo = videoUrl.includes("vimeo.com");
+    const isMp4 = videoUrl.endsWith(".mp4");
+
+    if (!isYouTube && !isVimeo && !isMp4) {
+      alert("Please enter a valid YouTube, Vimeo, or MP4 URL");
       setLoading(false);
       return;
     }
 
-    setTitle("");
-    setCreator("");
-    setVideoUrl("");
-    setThumbnailUrl(""); // ✅ reset thumbnail
-    setLoading(false);
+    let thumbnailUrl = null;
 
-    alert("Film submitted 🎬");
-  };
+    // 🎯 SAFE YouTube thumbnail extraction
+    if (isYouTube) {
+      let videoId = "";
+
+      if (videoUrl.includes("youtu.be/")) {
+        videoId = videoUrl.split("youtu.be/")[1]?.split("?")[0];
+      } else if (videoUrl.includes("watch?v=")) {
+        videoId = videoUrl.split("watch?v=")[1]?.split("&")[0];
+      }
+
+      if (videoId) {
+        thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      }
+    }
+
+    // 🎯 fallback thumbnail (prevents crashes + keeps UI filled)
+    if (!thumbnailUrl) {
+      thumbnailUrl = "https://via.placeholder.com/300x170?text=Preview";
+    }
+
+    try {
+      const res = await fetch("/api/films", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          creator,
+          video_url: videoUrl,
+          thumbnail_url: thumbnailUrl,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("SERVER ERROR:", errorText);
+        alert("Server Error: " + errorText);
+        setLoading(false);
+        return;
+      }
+
+      alert("Film submitted!");
+      setTitle("");
+      setCreator("");
+      setVideoUrl("");
+    } catch (err) {
+      console.error(err);
+      alert("Error submitting film");
+    }
+
+    setLoading(false);
+  }
 
   return (
     <main style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Submit Your Film</h1>
+      {/* BACK BUTTON */}
+      <button
+        style={styles.back}
+        onClick={() => (window.location.href = "/")}
+      >
+        ← Back
+      </button>
 
-        <form onSubmit={handleSubmit}>
+      {/* CENTERED FORM */}
+      <div style={styles.container}>
+        <h1 style={styles.title}>Submit a Film</h1>
+
+        <form onSubmit={handleSubmit} style={styles.form}>
           <input
-            style={styles.input}
             placeholder="Film Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            required
+            style={styles.input}
           />
 
           <input
-            style={styles.input}
             placeholder="Creator Name"
             value={creator}
             onChange={(e) => setCreator(e.target.value)}
+            required
+            style={styles.input}
           />
 
           <input
-            style={styles.input}
-            placeholder="Thumbnail Image URL"
-            value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
-          />
-
-          <input
-            style={styles.input}
-            placeholder="Video URL"
+            placeholder="Video URL (YouTube, Vimeo, MP4)"
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
+            required
+            style={styles.input}
           />
 
-          <button style={styles.button} disabled={loading}>
+          <button type="submit" style={styles.submit}>
             {loading ? "Submitting..." : "Submit Film"}
           </button>
         </form>
@@ -81,39 +129,69 @@ export default function SubmitPage() {
   );
 }
 
+/* 🎬 NETFLIX STYLE PRESERVED */
 const styles = {
   page: {
-    backgroundColor: "#141414",
-    height: "100vh",
+    backgroundColor: "black",
+    color: "white",
+    minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    fontFamily: "Arial",
   },
-  card: {
-    backgroundColor: "#1f1f1f",
-    padding: "40px",
-    borderRadius: "12px",
-    width: "400px",
-  },
-  title: {
+
+  back: {
+    position: "absolute",
+    top: "20px",
+    left: "20px",
+    background: "transparent",
     color: "white",
-    marginBottom: "20px",
+    border: "none",
+    fontSize: "16px",
+    cursor: "pointer",
   },
+
+  container: {
+    backgroundColor: "rgba(0,0,0,0.85)",
+    padding: "40px",
+    borderRadius: "10px",
+    width: "400px",
+    boxShadow: "0 0 30px rgba(0,0,0,0.9)",
+    transition: "all 0.3s ease",
+  },
+
+  title: {
+    fontSize: "32px",
+    marginBottom: "20px",
+    textAlign: "center",
+  },
+
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+  },
+
   input: {
-    width: "100%",
     padding: "12px",
-    marginBottom: "12px",
     borderRadius: "6px",
     border: "none",
+    backgroundColor: "#222",
+    color: "white",
+    fontSize: "14px",
+    outline: "none",
   },
-  button: {
-    width: "100%",
+
+  submit: {
     padding: "12px",
     backgroundColor: "#e50914",
-    color: "white",
-    fontWeight: "bold",
     border: "none",
     borderRadius: "6px",
+    color: "white",
+    fontWeight: "bold",
     cursor: "pointer",
+    fontSize: "16px",
+    transition: "transform 0.2s ease, background 0.2s",
   },
 };

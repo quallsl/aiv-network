@@ -14,11 +14,11 @@ export default function Hero({ item }) {
       <div className="relative h-[60vh] min-h-[420px] w-full overflow-hidden bg-black">
         {item?.backdrop ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.backdrop}
-            alt={item?.title ?? "Backdrop"}
-            className="h-full w-full object-cover opacity-90"
-          />
+        <img
+          src={film.thumbnail_url}
+          alt={film.title}
+          className="w-full h-full object-cover"
+        />
         ) : null}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />

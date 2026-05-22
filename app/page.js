@@ -10,10 +10,29 @@ export default function HomePage() {
     async function fetchFilms() {
       try {
         const res = await fetch("/api/films");
-        const data = await res.json();
+
+        const text = await res.text(); // ✅ SAFE
+        console.log("RAW API:", text);
+
+        let data = [];
+
+try {
+  const response = await fetch("/api/films");
+
+  const text = await response.text();
+
+  console.log("RAW RESPONSE:", text);
+
+  data = JSON.parse(text);
+} catch (e) {
+  console.error("JSON BROKEN:", e);
+  data = [];
+}
+
         setFilms(Array.isArray(data) ? data : data.data || []);
       } catch (err) {
-        console.error(err);
+        console.error("FETCH FAILED:", err);
+        setFilms([]);
       }
     }
 
@@ -35,7 +54,7 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* HERO TRAILER */}
+      {/* HERO */}
       <div style={styles.hero}>
         <video
           src={trailerUrl}
@@ -60,49 +79,72 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* FILM ROW */}
+      {/* ROW */}
       <div style={styles.row}>
         {films.map((film) => {
-          const thumbnail =
-            film.thumbnail_url ||
-            (film.video_url
-              ? film.video_url
-                  .replace("/video/upload/", "/image/upload/")
-                  .replace(".mp4", ".jpg")
-              : "");
+          const isHovered = hoveredId === film.id;
+
+          const getYouTubeId = (url) => {
+  if (!url) return null;
+  const reg =
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&]+)/;
+  const match = url.match(reg);
+  return match ? match[1] : null;
+};
+
+const youtubeId = getYouTubeId(film.video_url);
+
+const thumbnail =
+  film.thumbnail_url ||
+  (youtubeId
+    ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`
+    : film.video_url?.includes("/video/upload/")
+    ? film.video_url
+        .replace("/video/upload/", "/image/upload/")
+        .replace(".mp4", ".jpg")
+    : "https://via.placeholder.com/300x170?text=Preview");
 
           return (
-            <div key={film.id} style={styles.card}>
-              {hoveredId === film.id ? (
-                <video
-                  src={film.video_url}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  style={styles.thumbnail}
-                  onMouseEnter={() => setHoveredId(film.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={() =>
-                    window.open(film.video_url, "_blank")
-                  }
-                />
-              ) : thumbnail ? (
-                <img
-                  src={thumbnail}
-                  style={styles.thumbnail}
-                  onMouseEnter={() => setHoveredId(film.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  onClick={() =>
-                    window.open(film.video_url, "_blank")
-                  }
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div style={styles.placeholder}>No Image</div>
-              )}
+            <div
+              key={film.id}
+              style={{
+                ...styles.card,
+                transform: isHovered ? "scale(1.08)" : "scale(1)",
+                zIndex: isHovered ? 5 : 1,
+              }}
+              onMouseEnter={() => setHoveredId(film.id)}
+              onMouseLeave={() => setHoveredId(null)}
+            >
+              <div style={styles.mediaWrapper}>
+                {isHovered ? (
+                  film.type === "youtube" || film.type === "vimeo" ? (
+                    <iframe
+                      src={film.embed_url}
+                      style={styles.thumbnail}
+                      allow="autoplay"
+                    />
+                  ) : (
+                    <video
+                      src={film.video_url}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      style={styles.thumbnail}
+                    />
+                  )
+                ) : (
+                  <img
+                    src={thumbnail}
+                    alt={film.title}
+                    style={styles.thumbnail}
+                    onError={(e) => {
+                      e.currentTarget.src =
+                        "https://via.placeholder.com/300x170?text=Broken";
+                    }}
+                  />
+                )}
+              </div>
 
               <h3 style={styles.title}>{film.title}</h3>
               <p style={styles.creator}>{film.creator}</p>
@@ -112,9 +154,9 @@ export default function HomePage() {
       </div>
     </main>
   );
-} // ✅ THIS WAS MISSING
+}
 
-/* ✅ STYLES OUTSIDE COMPONENT */
+/* STYLES */
 const styles = {
   page: {
     backgroundColor: "black",
@@ -190,6 +232,11 @@ const styles = {
 
   card: {
     minWidth: "200px",
+    transition: "transform 0.3s ease",
+  },
+
+  mediaWrapper: {
+    position: "relative",
   },
 
   thumbnail: {
@@ -198,17 +245,6 @@ const styles = {
     objectFit: "cover",
     borderRadius: "6px",
     cursor: "pointer",
-  },
-
-  placeholder: {
-    width: "200px",
-    height: "120px",
-    backgroundColor: "#222",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "6px",
-    color: "#888",
   },
 
   title: {
