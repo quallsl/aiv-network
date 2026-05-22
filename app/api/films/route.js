@@ -96,7 +96,7 @@ export async function POST(req) {
           creator,
           video_url,
           thumbnail_url: finalThumbnail,
-          description,
+          thumbnail_url,
         },
       ])
       .select();
