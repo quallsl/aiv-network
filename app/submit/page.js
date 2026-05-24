@@ -7,7 +7,8 @@ export default function SubmitPage() {
   const [creator, setCreator] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [activeFilm, setActiveFilm] = useState(null);
+  
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);

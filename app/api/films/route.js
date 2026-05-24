@@ -45,21 +45,21 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from("films")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    return Response.json(data);
+    return new Response(JSON.stringify(data || []), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
 
   } catch (err) {
-    console.error("GET FILMS ERROR:", err);
+    console.error("API ERROR:", err);
 
-    return Response.json(
-      { error: err.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ data: [], error: err.message }),
+      { status: 200 } // 👈 IMPORTANT: still valid JSON
     );
   }
 }
