@@ -27,7 +27,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ background: "#000", color: "#fff" }}>{children}</body>
+      <body className="bg-black text-white min-h-screen flex flex-col">{children}</body>
     </html>
   );
 }
