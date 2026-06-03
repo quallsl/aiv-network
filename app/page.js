@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
 export default function HomePage() {
@@ -8,39 +7,21 @@ export default function HomePage() {
   const [fullscreenFilm, setFullscreenFilm] = useState(null);
 
   /* =========================
-     FETCH
+     FETCH FILMS
   ========================= */
   useEffect(() => {
     async function fetchFilms() {
       try {
         const res = await fetch("/api/films");
-        const text = await res.text();
-
-        let data = [];
-        try {
-          data = JSON.parse(text);
-        } catch {
-          console.error("Bad JSON:", text);
-        }
-
-        setFilms(Array.isArray(data) ? data : data.data || []);
+        const data = await res.json();
+        console.log("DATA:", data);
+        setFilms(data);
       } catch (err) {
-        console.error("FETCH FAILED:", err);
-        setFilms([]);
+        console.error("FETCH ERROR:", err);
       }
     }
-
     fetchFilms();
   }, []);
-
-  /* =========================
-     CATEGORIES
-  ========================= */
-  const categories = {
-    Trending: films.slice(0, 10),
-    "New Releases": films.slice(10, 20),
-    "AIV Originals": films.slice(20, 30),
-  };
 
   /* =========================
      HERO VIDEO
@@ -49,37 +30,45 @@ export default function HomePage() {
     "https://res.cloudinary.com/dbefmxqss/video/upload/v1768880039/aiv-films-wonderboy-trailer_vae68x.mp4";
 
   /* =========================
+     CATEGORY LOGIC
+  ========================= */
+  const categories = {
+  Trending:
+    films.filter((f) => f.trending === true).length > 0
+      ? films.filter((f) => f.trending === true)
+      : films.slice(0, 10),
+
+  "New Releases":
+    films.filter((f) => f.new_release === true).length > 0
+      ? films.filter((f) => f.new_release === true)
+      : films.slice(0, 10),
+
+  "AIV Originals":
+    films.filter((f) => f.aiv_original === true).length > 0
+      ? films.filter((f) => f.aiv_original === true)
+      : films.slice(0, 10),
+};
+
+  /* =========================
      HELPERS
   ========================= */
   const getYouTubeId = (url) => {
     if (!url) return null;
-
     const match = url.match(
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/
     );
-
     return match ? match[1] : null;
-  };
-
-  const getYouTubeEmbed = (url) => {
-    const id = getYouTubeId(url);
-
-    return id
-      ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=1&rel=0`
-      : null;
-  };
-
-  // 🔥 NEW: hover preview version
-  const getYouTubePreview = (url) => {
-    const id = getYouTubeId(url);
-
-    return id
-      ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&modestbranding=1&loop=1&playlist=${id}`
-      : null;
   };
 
   const isYouTube = (url) =>
     url?.includes("youtube.com") || url?.includes("youtu.be");
+
+  const getYouTubePreview = (url) => {
+    const id = getYouTubeId(url);
+    return id
+      ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&loop=1&playlist=${id}`
+      : null;
+  };
 
   const getThumbnail = (film) => {
     if (film.thumbnail_url?.startsWith("http")) {
@@ -88,16 +77,16 @@ export default function HomePage() {
 
     const yt = getYouTubeId(film.video_url);
     if (yt) {
-      return `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`;
+      return `https://img.youtube.com/vi/${yt}/hqdefault.jpg`;
     }
 
-    if (film.video_url?.includes("/video/upload/")) {
+    if (film.video_url?.includes("res.cloudinary.com")) {
       return film.video_url
-        .replace("/video/upload/", "/image/upload/")
-        .replace(".mp4", ".jpg");
+        .replace("/upload/", "/upload/so_1,w_400,h_225,c_fill/")
+        .replace(/\.\w+$/, ".jpg");
     }
 
-    return "https://via.placeholder.com/300x170?text=Preview";
+    return "https://placehold.co/300x170?text=No+Thumbnail";
   };
 
   const handleCardClick = (film) => {
@@ -105,7 +94,7 @@ export default function HomePage() {
   };
 
   /* =========================
-     FILM CARD (POLISHED)
+     FILM CARD
   ========================= */
   function FilmCard({ film }) {
     const [hovered, setHovered] = useState(false);
@@ -131,14 +120,12 @@ export default function HomePage() {
           zIndex: isExpanded ? 50 : 1,
         }}
       >
-        {/* MEDIA */}
         {hovered || isExpanded ? (
           isYouTube(film.video_url) ? (
             <iframe
               src={getYouTubePreview(film.video_url)}
               style={styles.thumbnail}
-              frameBorder="0"
-              allow="autoplay; encrypted-media"
+              allow="autoplay"
             />
           ) : (
             <video
@@ -146,32 +133,19 @@ export default function HomePage() {
               autoPlay
               muted
               loop
-              playsInline
               style={styles.thumbnail}
             />
           )
         ) : (
-          <img src={thumbnail} alt={film.title} style={styles.thumbnail} />
-        )}
-
-        {/* OVERLAY */}
-        {(hovered || isExpanded) && (
-          <div style={styles.overlayCard}>
-            <p>{film.title}</p>
-          </div>
-        )}
-
-        {/* FULLSCREEN BUTTON */}
-        {isExpanded && (
-          <button
-            style={styles.fullscreenButton}
-            onClick={(e) => {
-              e.stopPropagation();
-              setFullscreenFilm(film);
+          <img
+            src={thumbnail}
+            alt={film.title}
+            style={styles.thumbnail}
+            onError={(e) => {
+              e.target.src =
+                "https://placehold.co/300x170?text=Thumbnail+Error";
             }}
-          >
-            ⛶
-          </button>
+          />
         )}
       </div>
     );
@@ -195,6 +169,7 @@ export default function HomePage() {
       {/* HERO */}
       <div style={styles.hero}>
         <video src={trailerUrl} autoPlay muted loop style={styles.video} />
+
         <div style={styles.overlay}>
           <div>
             <h1 style={styles.heroTitle}>AIV Films</h1>
@@ -209,51 +184,19 @@ export default function HomePage() {
       </div>
 
       {/* ROWS */}
-      {films.length > 0 ? (
-        Object.entries(categories).map(([title, categoryFilms]) => (
-          <div key={title} style={{ marginBottom: "40px" }}>
-            <h2 style={styles.rowTitle}>{title}</h2>
-
+      {films.length === 0 ? (
+        <p>Loading...</p>
+      ) : (
+        Object.entries(categories).map(([title, list]) => (
+          <div key={title}>
+            <h2>{title}</h2>
             <div style={styles.row}>
-              {categoryFilms.map((film) => (
+              {list.map((film) => (
                 <FilmCard key={film.id} film={film} />
               ))}
             </div>
           </div>
         ))
-      ) : (
-        <p>Loading films...</p>
-      )}
-
-      {/* FULLSCREEN */}
-      {fullscreenFilm && (
-        <div
-          style={styles.fullscreenOverlay}
-          onClick={() => setFullscreenFilm(null)}
-        >
-          <div
-            style={styles.fullscreenContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {isYouTube(fullscreenFilm.video_url) ? (
-              <iframe
-                src={getYouTubeEmbed(fullscreenFilm.video_url)}
-                style={styles.fullscreenVideo}
-                title={fullscreenFilm.title}
-                frameBorder="0"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                allowFullScreen
-              />
-            ) : (
-              <video
-                src={fullscreenFilm.video_url}
-                autoPlay
-                controls
-                style={styles.fullscreenVideo}
-              />
-            )}
-          </div>
-        </div>
       )}
     </main>
   );
@@ -264,30 +207,39 @@ export default function HomePage() {
 ========================= */
 const styles = {
   page: {
-    padding: "20px",
     background: "#000",
     color: "#fff",
-    fontFamily: "Arial",
+    padding: "20px",
+    fontFamily: "Optima",
   },
 
-  nav: { display: "flex", justifyContent: "flex-end" },
+  nav: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginBottom: "10px",
+  },
 
   submitButton: {
     padding: "10px 20px",
     backgroundColor: "#e50914",
-    color: "white",
+    color: "#fff",
     border: "none",
     borderRadius: "4px",
+    cursor: "pointer",
   },
 
   hero: {
     position: "relative",
     height: "400px",
-    marginBottom: "40px",
+    marginBottom: "30px",
     overflow: "hidden",
   },
 
-  video: { width: "100%", height: "100%", objectFit: "cover" },
+  video: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
 
   overlay: {
     position: "absolute",
@@ -298,25 +250,25 @@ const styles = {
     justifyContent: "center",
   },
 
-  heroTitle: { fontSize: "48px" },
+  heroTitle: {
+    fontSize: "48px",
+    fontWeight: "bold",
+  },
 
   playButton: {
     padding: "12px 24px",
     backgroundColor: "#e50914",
-    color: "white",
+    color: "#fff",
     border: "none",
     marginTop: "20px",
-  },
-
-  rowTitle: {
-    fontSize: "20px",
-    marginBottom: "10px",
+    cursor: "pointer",
   },
 
   row: {
     display: "flex",
-    overflowX: "auto",
     gap: "12px",
+    overflowX: "auto",
+    marginBottom: "20px",
   },
 
   thumbnail: {
@@ -324,45 +276,5 @@ const styles = {
     height: "100%",
     objectFit: "cover",
     borderRadius: "6px",
-  },
-
-  overlayCard: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    background: "rgba(0,0,0,0.7)",
-    padding: "6px",
-    fontSize: "12px",
-  },
-
-  fullscreenButton: {
-    position: "absolute",
-    bottom: "10px",
-    right: "10px",
-    background: "rgba(0,0,0,0.7)",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    cursor: "pointer",
-  },
-
-  fullscreenOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.95)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10000,
-  },
-
-  fullscreenContent: {
-    width: "90%",
-    maxWidth: "1000px",
-  },
-
-  fullscreenVideo: {
-    width: "100%",
-    height: "80vh",
   },
 };

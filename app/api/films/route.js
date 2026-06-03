@@ -1,12 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export async function GET() {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const { data, error } = await supabase
       .from("films")
       .select("*")
@@ -14,18 +14,12 @@ export async function GET() {
 
     if (error) {
       console.error("SUPABASE ERROR:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-      });
+      return Response.json({ error: error.message }, { status: 500 });
     }
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-    });
+    return Response.json(data || []);
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    return new Response(JSON.stringify({ error: "Server failed" }), {
-      status: 500,
-    });
+    return Response.json({ error: "Server failed" }, { status: 500 });
   }
 }
