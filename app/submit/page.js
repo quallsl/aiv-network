@@ -1,129 +1,122 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function SubmitPage() {
-  const [file, setFile] = useState(null);
+  const router = useRouter();
+
   const [title, setTitle] = useState("");
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [creator, setCreator] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
 
-  /* =========================
-     FILE HANDLING
-  ========================= */
-  const handleFile = (selectedFile) => {
-    if (!selectedFile) return;
-    setFile(selectedFile);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-    handleFile(e.dataTransfer.files[0]);
-  };
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  /* =========================
-     UPLOAD FLOW
-  ========================= */
-  const handleUpload = async () => {
-  try {
-    if (!file) {
-      alert("Please select a file");
+  const handleSubmit = async () => {
+    if (!title || !videoUrl) {
+      alert("Please fill in required fields");
       return;
     }
 
-    setUploading(true);
-    setProgress(0);
+    try {
+      const res = await fetch("/api/films", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          creator,
+          video_url: videoUrl,
+          thumbnail_url: videoUrl, // fallback
+        }),
+      });
 
-    // Get Cloudinary signature
-    const sigRes = await fetch("/api/sign-cloudinary");
-    const sig = await sigRes.json();
+      if (!res.ok) throw new Error("Failed");
 
-    const formData = new FormData();
+      alert("Film submitted!");
+      router.push("/");
+    } catch (err) {
+      console.error(err);
+      alert("Error submitting film");
+    }
+  };
 
-    formData.append("file", file);
-    formData.append("api_key", sig.apiKey);
-    formData.append("timestamp", sig.timestamp);
-    formData.append("signature", sig.signature);
-    formData.append("folder", "aiv-films");
+  return (
+    <div style={styles.page}>
+      
+      {/* 🔙 BACK BUTTON */}
+      <div style={styles.back} onClick={() => router.push("/")}>
+        ← Back
+      </div>
 
-    const xhr = new XMLHttpRequest();
+      <div style={styles.container}>
+        <h1 style={styles.title}>Submit a Film</h1>
 
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percent = Math.round(
-          (event.loaded / event.total) * 100
-        );
-        setProgress(percent);
-      }
-    };
+        <input
+          style={styles.input}
+          placeholder="Film Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
 
-    xhr.onload = async () => {
-      try {
-        const uploadData = JSON.parse(xhr.responseText);
+        <input
+          style={styles.input}
+          placeholder="Creator Name"
+          value={creator}
+          onChange={(e) => setCreator(e.target.value)}
+        />
 
-        if (xhr.status !== 200) {
-          throw new Error(
-            uploadData?.error?.message || "Upload failed"
-          );
-        }
+        <input
+          style={styles.input}
+          placeholder="Video URL (YouTube, Vimeo, MP4)"
+          value={videoUrl}
+          onChange={(e) => setVideoUrl(e.target.value)}
+        />
 
-        const filmRes = await fetch("/api/films", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title,
-            video_url: uploadData.secure_url,
-            public_id: uploadData.public_id,
-          }),
-        });
+        <button style={styles.button} onClick={handleSubmit}>
+          Submit Film
+        </button>
+      </div>
+    </div>
+  );
+}
 
-        const filmData = await filmRes.json();
-
-        if (!filmRes.ok) {
-          throw new Error(
-            filmData.error || "Failed to save film"
-          );
-        }
-
-        window.location.href = "/";
-      } catch (err) {
-        console.error(err);
-        alert(err.message);
-      } finally {
-        setUploading(false);
-      }
-    };
-
-    xhr.onerror = () => {
-      setUploading(false);
-      alert("Upload failed");
-    };
-
-    xhr.open(
-      "POST",
-      `https://api.cloudinary.com/v1_1/${sig.cloudName}/video/upload`
-    );
-
-    xhr.send(formData);
-
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-    setUploading(false);
-  }
+const styles = {
+  page: {
+    backgroundColor: "black",
+    height: "100vh",
+    color: "white",
+    padding: "20px",
+  },
+  back: {
+    cursor: "pointer",
+    marginBottom: "40px",
+    fontSize: "16px",
+  },
+  container: {
+    maxWidth: "400px",
+    margin: "0 auto",
+    textAlign: "center",
+  },
+  title: {
+    marginBottom: "20px",
+  },
+  input: {
+    width: "100%",
+    padding: "12px",
+    marginBottom: "15px",
+    borderRadius: "6px",
+    border: "none",
+    backgroundColor: "#222",
+    color: "white",
+  },
+  button: {
+    width: "100%",
+    padding: "12px",
+    backgroundColor: "red",
+    border: "none",
+    borderRadius: "6px",
+    color: "white",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
 };
