@@ -1,7 +1,9 @@
 import { getSupabase } from "../../../lib/supabase";
 
+export const dynamic = "force-dynamic"; // (important)
+
 export async function GET() {
-  const supabase = getSupabase(); // ✅ NOW runtime only
+  const supabase = getSupabase();
 
   const { data, error } = await supabase
     .from("films")
