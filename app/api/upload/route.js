@@ -1,23 +1,15 @@
-import { uploadLargeToCloudinary } from "../../../lib/cloudinary";
+import { getSupabase } from "../../../lib/supabase";
 
-export async function POST(req) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get("file");
+export async function GET() {
+  const supabase = getSupabase(); // ✅ NOW runtime only
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+  const { data, error } = await supabase
+    .from("films")
+    .select("*");
 
-    const result = await uploadLargeToCloudinary(buffer);
-
-    return Response.json({
-      secure_url: result.secure_url,
-      thumbnail_url: result.secure_url
-        .replace("/upload/", "/upload/so_1,w_400,h_225,c_fill/")
-        .replace(/\.\w+$/, ".jpg"),
-    });
-  } catch (err) {
-    console.error(err);
-    return Response.json({ error: "Upload failed" }, { status: 500 });
+  if (error) {
+    return Response.json({ error: error.message }, { status: 500 });
   }
+
+  return Response.json(data);
 }
