@@ -1,4 +1,4 @@
-import { uploadLargeToCloudinary } from "../../lib/cloudinary";
+import { uploadLargeToCloudinary } from "../../../src/lib/cloudinary";
 
 export async function POST(req) {
   try {
