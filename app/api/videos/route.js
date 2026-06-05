@@ -1,16 +1,16 @@
-import { supabase } from "../../../lib/supabase";
+import { getSupabase } from "../../../lib/supabase";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const supabase = getSupabase();
+
   const { data, error } = await supabase
-    .from("videos")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .from("films")
+    .select("*");
 
   if (error) {
-    return Response.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return Response.json({ error: error.message }, { status: 500 });
   }
 
   return Response.json(data);
