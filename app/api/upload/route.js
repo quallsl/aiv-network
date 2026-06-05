@@ -1,35 +1,30 @@
 import { getSupabase } from "../../../lib/supabase";
-import { uploadLargeToCloudinary } from "../../../src/lib/cloudinary";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
     const supabase = getSupabase();
 
-    const formData = await req.formData();
-    const file = formData.get("file");
-    const title = formData.get("title");
+    const body = await req.json();
+    const { title, creator, video_url } = body;
 
-    if (!file) {
-      return Response.json({ error: "No file uploaded" }, { status: 400 });
+    if (!title || !video_url) {
+      return Response.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Upload to Cloudinary
-    const uploadResult = await uploadLargeToCloudinary(buffer);
-
-    // Save to Supabase
     const { data, error } = await supabase
       .from("films")
       .insert([
         {
-          title: title || "Untitled",
-          video_url: uploadResult.secure_url,
-          thumbnail_url: uploadResult.secure_url, // can improve later
+          title,
+          creator: creator || null,
+          video_url,
+          thumbnail_url: video_url,
         },
       ])
       .select();
