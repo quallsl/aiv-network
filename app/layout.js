@@ -19,8 +19,8 @@ export const metadata = {
     images: ["/twitter-image"],
   },
   icons: {
-    icon: "/icon",
-    apple: "/icon",
+    icon: "/icon.png",
+    apple: "/icon.png",
   },
 };
 
