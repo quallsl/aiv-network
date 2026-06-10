@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 
 /* =========================
    GET SINGLE FILM
 ========================= */
 export async function GET(request, { params }) {
   const { id } = params;
-
+  const supabase = getSupabase();
   const { data, error } = await supabase
     .from("films")
     .select("*")
