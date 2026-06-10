@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
-      "cd aiv-networkcd aiv-networkapppackage.jsonnext.config.jsnpm run dev@/*": ["./*"]
+      "@/*": ["./*"]
     }
   }
 }
