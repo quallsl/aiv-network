@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 export default function HomePage() {
   const [films, setFilms] = useState([]);
   const [fullscreenFilm, setFullscreenFilm] = useState(null);
-
+  const [selectedFilm, setSelectedFilm] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   /* =========================
      FETCH FILMS
   ========================= */
@@ -31,21 +33,24 @@ export default function HomePage() {
   /* =========================
      CATEGORY LOGIC
   ========================= */
+  const filteredFilms = films.filter((film) =>
+  film.title?.toLowerCase().includes(searchTerm.toLowerCase())
+);
   const categories = {
     Trending:
-      films.filter((f) => f.trending).length > 0
-        ? films.filter((f) => f.trending)
-        : films.slice(0, 10),
+      filteredFilms.filter((f) => f.trending).length > 0
+        ? filteredFilms.filter((f) => f.trending)
+        : filteredFilms.slice(0, 10),
 
     "New Releases":
-      films.filter((f) => f.new_release).length > 0
-        ? films.filter((f) => f.new_release)
-        : films.slice(0, 10),
+      filteredFilms.filter((f) => f.new_release).length > 0
+        ? filteredFilms.filter((f) => f.new_release)
+        : filteredFilms.slice(0, 10),
 
     "AIV Originals":
-      films.filter((f) => f.aiv_original).length > 0
-        ? films.filter((f) => f.aiv_original)
-        : films.slice(0, 10),
+      filteredFilms.filter((f) => f.aiv_original).length > 0
+        ? filteredFilms.filter((f) => f.aiv_original)
+        : filteredFilms.slice(0, 10),
   };
 
   /* =========================
@@ -123,7 +128,7 @@ export default function HomePage() {
 
     return (
       <div
-        onClick={() => setFullscreenFilm(film)}
+        onClick={() => setSelectedFilm(film)}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
@@ -147,13 +152,15 @@ export default function HomePage() {
             />
           ) : (
             <video
-              src={film.video_url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={styles.thumbnail}
-            />
+  src={trailerUrl}
+  autoPlay
+  muted
+  loop
+  playsInline
+  preload="metadata"
+  poster="https://res.cloudinary.com/dbefmxqss/video/upload/so_1/aiv-films-wonderboy-trailer_vae68x.jpg"
+  style={styles.video}
+/>
           )
         ) : (
           <img
@@ -179,17 +186,63 @@ export default function HomePage() {
     <main style={styles.page}>
       {/* NAV */}
       <div style={styles.nav}>
-        <button
-          style={styles.submitButton}
-          onClick={() => (window.location.href = "/submit")}
-        >
-          + Submit Film
-        </button>
-      </div>
+      {menuOpen && (
+  <div style={styles.menuDropdown}>
+    <div
+      style={styles.menuItem}
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+    >
+      Home
+    </div>
 
+    <div style={styles.menuItem}>
+      Trending
+    </div>
+
+    <div style={styles.menuItem}>
+      New Releases
+    </div>
+
+    <div style={styles.menuItem}>
+      AIV Originals
+    </div>
+  </div>
+)}
+  <button
+    style={styles.menuButton}
+    onClick={() => setMenuOpen(!menuOpen)}
+  >
+    ☰ Menu
+  </button>
+
+  <input
+    type="text"
+    placeholder="Search films..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    style={styles.searchBar}
+  />
+
+  <button
+    style={styles.submitButton}
+    onClick={() => (window.location.href = "/submit")}
+  >
+    + Submit Film
+  </button>
+</div>
+  
       {/* HERO */}
       <div style={styles.hero}>
-        <video src={trailerUrl} autoPlay muted loop style={styles.video} />
+        <video
+  src={trailerUrl}
+  autoPlay
+  muted
+  loop
+  playsInline
+  preload="metadata"
+  poster="/hero.jpg"
+  style={styles.video}
+/>
         <div style={styles.overlay}>
           <h1 style={styles.heroTitle}>AIV Films</h1>
         </div>
@@ -214,6 +267,60 @@ export default function HomePage() {
       {/* =========================
           FULLSCREEN PLAYER
       ========================= */}
+      {/* =========================
+    FILM DETAILS MODAL
+========================= */}
+{selectedFilm && (
+  <div
+    style={styles.detailsOverlay}
+    onClick={() => setSelectedFilm(null)}
+  >
+    <div
+      style={styles.detailsCard}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <img
+        src={
+          selectedFilm.poster_url ||
+          getThumbnail(selectedFilm)
+        }
+        alt={selectedFilm.title}
+        style={styles.detailsPoster}
+      />
+
+      <div style={{ flex: 1 }}>
+        <h1>{selectedFilm.title}</h1>
+
+        <p>
+          {selectedFilm.description ||
+            "No description available."}
+        </p>
+
+        <p>
+          ⭐ {selectedFilm.rating || "NR"}
+        </p>
+
+        <p>
+          🎬 {selectedFilm.genre || "Unknown"}
+        </p>
+
+        <p>
+          ⏱ {selectedFilm.runtime || "N/A"}
+        </p>
+
+        <button
+          style={styles.watchButton}
+          onClick={() => {
+            setFullscreenFilm(selectedFilm);
+            setSelectedFilm(null);
+          }}
+        >
+          ▶ Watch Now
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       {fullscreenFilm && (
         <div
           style={styles.fullscreenOverlay}
@@ -344,4 +451,57 @@ const styles = {
     padding: "10px 14px",
     cursor: "pointer",
   },
+
+  menuDropdown: {
+    background: "#111",
+    border: "1px solid #333",
+    borderRadius: "6px",
+    padding: "10px",
+    marginBottom: "20px",
+    width: "220px",
+  },
+
+  menuItem: {
+    padding: "10px",
+    cursor: "pointer",
+    borderBottom: "1px solid #222",
+  },
+  
+ detailsOverlay: {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.9)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 10000,
+},
+
+detailsCard: {
+  background: "#111",
+  color: "#fff",
+  width: "85%",
+  maxWidth: "900px",
+  borderRadius: "12px",
+  padding: "20px",
+  display: "flex",
+  gap: "20px",
+},
+
+detailsPoster: {
+  width: "250px",
+  borderRadius: "8px",
+  objectFit: "cover",
+},
+
+watchButton: {
+  background: "#e50914",
+  color: "#fff",
+  border: "none",
+  padding: "12px 24px",
+  borderRadius: "6px",
+  cursor: "pointer",
+  marginTop: "20px",
+},
+  
 };
