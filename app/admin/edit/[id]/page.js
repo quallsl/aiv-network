@@ -29,19 +29,21 @@ try {
 const res = await fetch(`/api/films/edit/${id}`);
 const data = await res.json();
 
-```
+
     if (data) {
       setFilm(data);
     }
   } catch (err) {
     console.error(err);
+  } finally {
+    setLoading(false);
   }
-
-  setLoading(false);
 }
 
-loadFilm();
-```
+if (id) {
+  loadFilm();
+}
+
 
 }, [id]);
 
@@ -49,7 +51,7 @@ const saveFilm = async () => {
 try {
 setSaving(true);
 
-```
+
   const res = await fetch(`/api/films/edit/${id}`, {
     method: "PUT",
     headers: {
@@ -63,21 +65,20 @@ setSaving(true);
   }
 
   alert("Film updated successfully");
-
   window.location.href = "/";
 } catch (err) {
   console.error(err);
   alert("Save failed");
+} finally {
+  setSaving(false);
 }
 
-setSaving(false);
-```
 
 };
 
 if (loading) {
 return (
-<div style={{ padding: 40, color: "#fff" }}>
+<div style={{ padding: "40px", color: "#fff" }}>
 Loading... </div>
 );
 }
@@ -92,7 +93,7 @@ padding: "40px",
 }}
 > <h1>Edit Film</h1>
 
-```
+
   <div style={{ maxWidth: "700px" }}>
     <label>Title</label>
     <input
@@ -175,7 +176,7 @@ padding: "40px",
       style={styles.input}
     />
 
-    <div style={{ marginTop: 20 }}>
+    <div style={{ marginTop: "20px" }}>
       <label>
         <input
           type="checkbox"
@@ -187,7 +188,7 @@ padding: "40px",
             })
           }
         />
-        Trending
+        {" "}Trending
       </label>
     </div>
 
@@ -203,7 +204,7 @@ padding: "40px",
             })
           }
         />
-        New Release
+        {" "}New Release
       </label>
     </div>
 
@@ -219,7 +220,7 @@ padding: "40px",
             })
           }
         />
-        AIV Original
+        {" "}AIV Original
       </label>
     </div>
 
@@ -232,7 +233,7 @@ padding: "40px",
     </button>
   </div>
 </div>
-```
+
 
 );
 }
