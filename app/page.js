@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-
+import AVODPlayer from "../components/AVODPlayer";
 export default function HomePage() {
   const [films, setFilms] = useState([]);
   const [fullscreenFilm, setFullscreenFilm] = useState(null);
@@ -346,13 +346,17 @@ export default function HomePage() {
                 title={fullscreenFilm.title}
               />
             ) : (
-              <video
-                src={fullscreenFilm.video_url}
-                controls
-                autoPlay
-                style={styles.fullscreenVideo}
-              />
-            )}
+              const isMP4 = fullscreenFilm.video_url?.includes(".mp4");
+
+{isMP4 ? (
+  <AVODPlayer src={fullscreenFilm.video_url} />
+) : (
+  <iframe
+    src={fullscreenFilm.video_url}
+    style={styles.fullscreenVideo}
+    allow="autoplay; fullscreen"
+  />
+)}
           </div>
         </div>
       )}
