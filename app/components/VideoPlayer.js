@@ -3,71 +3,99 @@
 import { useEffect, useRef, useState } from "react";
 import { setProgress } from "./storage";
 
+const VAST_TAG = "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/21775744923/external/single_ad_samples&ciu_szs=300x250&cust_params=sample_ct%3Dlinear&gdfp_req=1&output=vast&env=vp&unviewed_position_start=1&impl=s&correlator=";
+
 export default function VideoPlayer({ src, meta }) {
-  const ref = useRef(null);
-  const [ready, setReady] = useState(false);
+  const videoRef = useRef(null);
+  const adContainerRef = useRef(null);
 
-  // Save progress periodically
+  const [adsLoaded, setAdsLoaded] = useState(false);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    const video = videoRef.current;
+    const adContainer = adContainerRef.current;
 
-    let lastSaved = 0;
+    if (!window.google || !window.google.ima) {
+      console.log("IMA SDK not loaded");
+      return;
+    }
 
-    const onLoaded = () => {
-      setReady(true);
-      // initial write
-      setProgress(meta.watchId, {
-        title: meta.title,
-        poster: meta.poster,
-        year: meta.year,
-        durationText: meta.duration,
-        duration: el.duration || 0,
-        currentTime: el.currentTime || 0,
-      });
+    const adDisplayContainer = new window.google.ima.AdDisplayContainer(
+      adContainer,
+      video
+    );
+
+    const adsLoader = new window.google.ima.AdsLoader(adDisplayContainer);
+
+    adsLoader.addEventListener(
+      window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
+      (event) => {
+        const adsManager = event.getAdsManager(video);
+
+        try {
+          adsManager.init(640, 360, window.google.ima.ViewMode.NORMAL);
+          adsManager.start(); // ▶️ PLAY AD
+        } catch (e) {
+          console.log("Ad error, playing content");
+          video.play();
+        }
+
+        adsManager.addEventListener(
+          window.google.ima.AdEvent.Type.COMPLETE,
+          () => {
+            video.play(); // ▶️ START MOVIE AFTER AD
+          }
+        );
+      }
+    );
+
+    adsLoader.addEventListener(
+      window.google.ima.AdErrorEvent.Type.AD_ERROR,
+      () => {
+        console.log("Ad failed, skipping");
+        video.play();
+      }
+    );
+
+    // 👇 REQUIRED: user interaction for autoplay policies
+    const startAds = () => {
+      adDisplayContainer.initialize();
+
+      const adsRequest = new window.google.ima.AdsRequest();
+      adsRequest.adTagUrl = VAST_TAG;
+
+      adsRequest.linearAdSlotWidth = 640;
+      adsRequest.linearAdSlotHeight = 360;
+
+      adsLoader.requestAds(adsRequest);
+      setAdsLoaded(true);
     };
 
-    const onTime = () => {
-      const now = Date.now();
-      // save at most every ~3 seconds
-      if (now - lastSaved < 3000) return;
-      lastSaved = now;
-
-      setProgress(meta.watchId, {
-        title: meta.title,
-        poster: meta.poster,
-        year: meta.year,
-        durationText: meta.duration,
-        duration: el.duration || 0,
-        currentTime: el.currentTime || 0,
-      });
-    };
-
-    el.addEventListener("loadedmetadata", onLoaded);
-    el.addEventListener("timeupdate", onTime);
+    video.addEventListener("play", startAds, { once: true });
 
     return () => {
-      el.removeEventListener("loadedmetadata", onLoaded);
-      el.removeEventListener("timeupdate", onTime);
+      video.removeEventListener("play", startAds);
     };
-  }, [meta, meta.watchId]);
+  }, []);
 
   return (
-    <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black shadow relative">
-      {!ready && (
-        <div className="absolute inset-0 grid place-items-center text-sm text-white/70">
-          Loading…
-        </div>
-      )}
+    <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black relative">
 
+      {/* 🎬 Ad container (sits on top of video) */}
+      <div
+        ref={adContainerRef}
+        className="absolute inset-0 z-10"
+      />
+
+      {/* 🎥 Video */}
       <video
-        ref={ref}
+        ref={videoRef}
         src={src}
         controls
         playsInline
-        preload="metadata"
-        className="h-full w-full"
+        className="w-full h-full"
       />
+
     </div>
   );
 }

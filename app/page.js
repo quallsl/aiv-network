@@ -1,25 +1,80 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AVODPlayer from "./AVODPlayer";
+import { getSupabase } from "../lib/supabase";
 
 export default function Page() {
   const [showMenu, setShowMenu] = useState(false);
+  const [films, setFilms] = useState([]);
+  const [hovered, setHovered] = useState(null);
+  const [activeFilm, setActiveFilm] = useState(null);
+  const [expandedFilm, setExpandedFilm] = useState(null);
+
   const router = useRouter();
 
-  const videos = [
-    "https://picsum.photos/300/200?1",
-    "https://picsum.photos/300/200?2",
-    "https://picsum.photos/300/200?3",
-    "https://picsum.photos/300/200?4",
-    "https://picsum.photos/300/200?5",
-  ];
+  useEffect(() => {
+    loadFilms();
+  }, []);
+
+  async function loadFilms() {
+    try {
+      const supabase = getSupabase();
+
+      const { data, error } = await supabase
+        .from("films")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setFilms(data || []);
+    } catch (err) {
+      console.error("Load films error:", err);
+    }
+  }
+
+  function getYouTubeId(url) {
+    if (!url) return null;
+
+    const regex =
+      /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
+
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  function getYouTubeThumbnail(url) {
+    const videoId = getYouTubeId(url);
+    return videoId
+      ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+      : null;
+  }
+
+  function getYouTubeEmbed(url) {
+    const videoId = getYouTubeId(url);
+    return videoId
+      ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`
+      : null;
+  }
+
+  function isYouTubeUrl(url) {
+    return url?.includes("youtube.com") || url?.includes("youtu.be");
+  }
 
   return (
-    <div style={{ background: "#000", color: "#fff", minHeight: "100vh" }}>
-      
-      {/* 🔴 TOP BAR */}
+    <div
+      style={{
+        background: "#000",
+        color: "#fff",
+        minHeight: "100vh",
+      }}
+    >
+      {/* TOP BAR */}
       <div
         style={{
           display: "flex",
@@ -27,12 +82,13 @@ export default function Page() {
           padding: "10px",
           alignItems: "center",
           background: "#111",
-          position: "relative",
-          zIndex: 10,
+          position: "sticky",
+          top: 0,
+          zIndex: 9999,
         }}
       >
-        {/* MENU BUTTON */}
         <button
+          type="button"
           onClick={() => setShowMenu(!showMenu)}
           style={{
             background: "#e50914",
@@ -40,61 +96,70 @@ export default function Page() {
             border: "none",
             padding: "8px 12px",
             cursor: "pointer",
+            fontWeight: "bold",
           }}
         >
           ☰ Menu
         </button>
 
-        {/* SEARCH */}
         <input
           placeholder="Search films..."
           style={{
-            padding: "6px",
-            width: "200px",
+            padding: "8px",
+            width: "230px",
             background: "#222",
             color: "#fff",
             border: "1px solid #444",
           }}
         />
 
-        {/* DROPDOWN MENU */}
         {showMenu && (
           <div
             style={{
               position: "absolute",
-              top: "50px",
+              top: "55px",
               left: "10px",
               background: "#111",
               border: "1px solid #333",
               padding: "10px",
-              zIndex: 20,
+              zIndex: 10000,
+              minWidth: "190px",
             }}
           >
             <button
-              onClick={() => router.push("/submit")}
+              type="button"
+              onClick={() => {
+                setShowMenu(false);
+                router.push("/submit");
+              }}
               style={{
                 display: "block",
+                width: "100%",
+                padding: "10px",
+                marginBottom: "8px",
                 background: "#e50914",
                 color: "#fff",
                 border: "none",
-                padding: "8px",
-                marginBottom: "5px",
                 cursor: "pointer",
-                width: "100%",
+                fontWeight: "bold",
+                borderRadius: "4px",
               }}
             >
               Submit Film
             </button>
 
             <button
+              type="button"
+              onClick={() => setShowMenu(false)}
               style={{
                 display: "block",
+                width: "100%",
+                padding: "10px",
                 background: "#222",
                 color: "#fff",
-                border: "none",
-                padding: "8px",
+                border: "1px solid #444",
                 cursor: "pointer",
-                width: "100%",
+                borderRadius: "4px",
               }}
             >
               Browse
@@ -103,44 +168,244 @@ export default function Page() {
         )}
       </div>
 
-      {/* 🔴 HERO — WONDERBOY TRAILER (RESTORED) */}
-      <div style={{ width: "100%", height: "500px" }}>
+      {/* WONDERBOY HERO */}
+      <div
+        style={{
+          width: "100%",
+          height: "500px",
+          marginBottom: "30px",
+          background: "#000",
+        }}
+      >
         <AVODPlayer src="https://res.cloudinary.com/dbefmxqss/video/upload/v1768880039/aiv-films-wonderboy-trailer_vae68x.mp4" />
       </div>
 
-      {/* 🔴 CONTENT ROWS */}
+      {/* FULLSCREEN PLAYER */}
+      {activeFilm && (
+        <div
+          onClick={() => setActiveFilm(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.95)",
+            zIndex: 20000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveFilm(null)}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "25px",
+              fontSize: "28px",
+              background: "none",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              zIndex: 20001,
+            }}
+          >
+            ✕
+          </button>
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "90%",
+              maxWidth: "1100px",
+              aspectRatio: "16/9",
+              background: "#000",
+            }}
+          >
+            {isYouTubeUrl(activeFilm.video_url) ? (
+              <iframe
+                src={getYouTubeEmbed(activeFilm.video_url)}
+                width="100%"
+                height="100%"
+                frameBorder="0"
+                allow="autoplay; fullscreen; encrypted-media"
+                allowFullScreen
+              />
+            ) : (
+              <video
+                src={activeFilm.video_url}
+                controls
+                autoPlay
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* FILM ROWS */}
       {["Trending", "New Releases", "AIV Originals"].map((section) => (
         <div key={section} style={{ padding: "20px" }}>
-          <h2>{section}</h2>
+          <h2 style={{ marginBottom: "10px" }}>{section}</h2>
 
           <div
             style={{
               display: "flex",
-              gap: "10px",
+              gap: "12px",
               overflowX: "auto",
+              paddingTop: "20px",
+              paddingBottom: "40px",
             }}
           >
-            {videos.map((src, i) => (
-              <video
-                key={i}
-                src="https://www.w3schools.com/html/mov_bbb.mp4"
-                muted
-                loop
-                onMouseEnter={(e) => e.target.play()}
-                onMouseLeave={(e) => {
-                  e.target.pause();
-                  e.target.currentTime = 0;
-                }}
-                style={{
-                  width: "200px",
-                  height: "120px",
-                  objectFit: "cover",
-                  background: "#222",
-                  cursor: "pointer",
-                }}
-              />
-            ))}
+            {films.map((film) => {
+              const url = film.video_url || "";
+              const isYouTube = isYouTubeUrl(url);
+
+              const thumbnail =
+                film.thumbnail_url ||
+                getYouTubeThumbnail(url) ||
+                "https://via.placeholder.com/320x180?text=No+Preview";
+
+              const isExpanded = expandedFilm === film.id;
+              const isHovered = hovered === film.id;
+
+              return (
+                <div
+                  key={`${section}-${film.id}`}
+                  onClick={() => {
+                    if (expandedFilm === film.id) {
+                      setActiveFilm(film);
+                    } else {
+                      setExpandedFilm(film.id);
+                    }
+                  }}
+                  onMouseEnter={() => setHovered(film.id)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{
+                    position: "relative",
+                    flexShrink: 0,
+                    width: isHovered || isExpanded ? "320px" : "200px",
+                    transition: "all .25s ease",
+                    zIndex: isHovered || isExpanded ? 999 : 1,
+                    cursor: "pointer",
+                  }}
+                >
+                  {isYouTube ? (
+                    <img
+                      src={thumbnail}
+                      alt={film.title || "Film"}
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          "https://via.placeholder.com/320x180?text=No+Preview";
+                      }}
+                      style={{
+                        width: "100%",
+                        height: isHovered || isExpanded ? "180px" : "120px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        background: "#222",
+                      }}
+                    />
+                  ) : (
+                    <video
+                      src={url}
+                      muted
+                      loop
+                      autoPlay={isHovered || isExpanded}
+                      controls={isHovered || isExpanded}
+                      poster={thumbnail}
+                      style={{
+                        width: "100%",
+                        height: isHovered || isExpanded ? "180px" : "120px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        background: "#222",
+                      }}
+                    />
+                  )}
+
+                  {(isHovered || isExpanded) && (
+                    <div
+                      style={{
+                        background: "#181818",
+                        padding: "10px",
+                        borderRadius: "0 0 6px 6px",
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: "16px",
+                        }}
+                      >
+                        {film.title || "Untitled Film"}
+                      </h4>
+
+                      <p
+                        style={{
+                          marginTop: "6px",
+                          marginBottom: 0,
+                          color: "#ccc",
+                          fontSize: "13px",
+                        }}
+                      >
+                        {film.creator || "Independent Creator"}
+                      </p>
+
+                      <p
+                        style={{
+                          marginTop: "6px",
+                          marginBottom: 0,
+                          color: "#aaa",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {film.genre || "AI Film"}{" "}
+                        {film.year ? `• ${film.year}` : ""}
+                      </p>
+
+                      <p
+                        style={{
+                          marginTop: "6px",
+                          marginBottom: 0,
+                          color: "#aaa",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {film.description || ""}
+                      </p>
+
+                      <p
+                        style={{
+                          marginTop: "8px",
+                          marginBottom: 0,
+                          color: "#fff",
+                          fontSize: "12px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Click again to play fullscreen
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
+
+          {films.length === 0 && (
+            <div
+              style={{
+                color: "#999",
+                marginTop: "10px",
+              }}
+            >
+              No films found.
+            </div>
+          )}
         </div>
       ))}
     </div>
