@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AVODPlayer from "./AVODPlayer";
+import AdsenseBanner from "./components/AdsenseBanner";
 import { getSupabase } from "../lib/supabase";
 
 export default function Page() {
@@ -11,6 +12,8 @@ export default function Page() {
   const [hovered, setHovered] = useState(null);
   const [activeFilm, setActiveFilm] = useState(null);
   const [expandedFilm, setExpandedFilm] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
 
   const router = useRouter();
 
@@ -66,6 +69,50 @@ export default function Page() {
     return url?.includes("youtube.com") || url?.includes("youtu.be");
   }
 
+  function getThumbnail(film) {
+    const url = film?.video_url || "";
+
+    return (
+      film?.thumbnail_url ||
+      getYouTubeThumbnail(url) ||
+      "https://via.placeholder.com/320x180?text=No+Preview"
+    );
+  }
+
+  const filteredFilms = films.filter((film) => {
+    const query = searchTerm.toLowerCase();
+
+    const matchesSearch =
+      !query ||
+      film.title?.toLowerCase().includes(query) ||
+      film.creator?.toLowerCase().includes(query) ||
+      film.genre?.toLowerCase().includes(query) ||
+      film.description?.toLowerCase().includes(query);
+
+    const matchesCategory =
+      selectedCategory === "All" ||
+      film.genre?.toLowerCase() === selectedCategory.toLowerCase();
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = {
+    Trending:
+      filteredFilms.filter((f) => f.trending).length > 0
+        ? filteredFilms.filter((f) => f.trending)
+        : filteredFilms.slice(0, 10),
+
+    "New Releases":
+      filteredFilms.filter((f) => f.new_release).length > 0
+        ? filteredFilms.filter((f) => f.new_release)
+        : filteredFilms.slice(0, 10),
+
+    "AIV Originals":
+      filteredFilms.filter((f) => f.aiv_original).length > 0
+        ? filteredFilms.filter((f) => f.aiv_original)
+        : filteredFilms.slice(0, 10),
+  };
+
   return (
     <div
       style={{
@@ -104,6 +151,8 @@ export default function Page() {
 
         <input
           placeholder="Search films..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             padding: "8px",
             width: "230px",
@@ -112,6 +161,22 @@ export default function Page() {
             border: "1px solid #444",
           }}
         />
+
+        <button
+          type="button"
+          onClick={() => router.push("/submit")}
+          style={{
+            background: "#e50914",
+            color: "#fff",
+            border: "none",
+            padding: "8px 12px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            borderRadius: "4px",
+          }}
+        >
+          + Submit Film
+        </button>
 
         {showMenu && (
           <div
@@ -129,28 +194,10 @@ export default function Page() {
             <button
               type="button"
               onClick={() => {
+                setSelectedCategory("All");
+                setSearchTerm("");
                 setShowMenu(false);
-                router.push("/submit");
               }}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                marginBottom: "8px",
-                background: "#e50914",
-                color: "#fff",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: "bold",
-                borderRadius: "4px",
-              }}
-            >
-              Submit Film
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowMenu(false)}
               style={{
                 display: "block",
                 width: "100%",
@@ -162,7 +209,7 @@ export default function Page() {
                 borderRadius: "4px",
               }}
             >
-              Browse
+              Browse All
             </button>
           </div>
         )}
@@ -178,6 +225,17 @@ export default function Page() {
         }}
       >
         <AVODPlayer src="https://res.cloudinary.com/dbefmxqss/video/upload/v1768880039/aiv-films-wonderboy-trailer_vae68x.mp4" />
+      </div>
+
+      {/* ADSENSE BANNER */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          margin: "24px 0",
+        }}
+      >
+        <AdsenseBanner />
       </div>
 
       {/* FULLSCREEN PLAYER */}
@@ -229,6 +287,7 @@ export default function Page() {
                 frameBorder="0"
                 allow="autoplay; fullscreen; encrypted-media"
                 allowFullScreen
+                title={activeFilm.title || "Film"}
               />
             ) : (
               <video
@@ -247,7 +306,7 @@ export default function Page() {
       )}
 
       {/* FILM ROWS */}
-      {["Trending", "New Releases", "AIV Originals"].map((section) => (
+      {Object.entries(categories).map(([section, list]) => (
         <div key={section} style={{ padding: "20px" }}>
           <h2 style={{ marginBottom: "10px" }}>{section}</h2>
 
@@ -260,15 +319,10 @@ export default function Page() {
               paddingBottom: "40px",
             }}
           >
-            {films.map((film) => {
+            {list.map((film) => {
               const url = film.video_url || "";
               const isYouTube = isYouTubeUrl(url);
-
-              const thumbnail =
-                film.thumbnail_url ||
-                getYouTubeThumbnail(url) ||
-                "https://via.placeholder.com/320x180?text=No+Preview";
-
+              const thumbnail = getThumbnail(film);
               const isExpanded = expandedFilm === film.id;
               const isHovered = hovered === film.id;
 
@@ -348,6 +402,17 @@ export default function Page() {
                         style={{
                           marginTop: "6px",
                           marginBottom: 0,
+                          color: "#bbb",
+                          fontSize: "12px",
+                        }}
+                      >
+                        👁 {film.views || 0} views
+                      </p>
+
+                      <p
+                        style={{
+                          marginTop: "6px",
+                          marginBottom: 0,
                           color: "#ccc",
                           fontSize: "13px",
                         }}
@@ -367,16 +432,18 @@ export default function Page() {
                         {film.year ? `• ${film.year}` : ""}
                       </p>
 
-                      <p
-                        style={{
-                          marginTop: "6px",
-                          marginBottom: 0,
-                          color: "#aaa",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {film.description || ""}
-                      </p>
+                      {film.description && (
+                        <p
+                          style={{
+                            marginTop: "6px",
+                            marginBottom: 0,
+                            color: "#aaa",
+                            fontSize: "12px",
+                          }}
+                        >
+                          {film.description}
+                        </p>
+                      )}
 
                       <p
                         style={{
@@ -396,7 +463,7 @@ export default function Page() {
             })}
           </div>
 
-          {films.length === 0 && (
+          {list.length === 0 && (
             <div
               style={{
                 color: "#999",
