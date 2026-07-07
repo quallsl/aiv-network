@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
+const BUNNY_LIBRARY_ID = "697977";
+
 export default function SubmitPage() {
   const router = useRouter();
-
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -28,9 +29,8 @@ export default function SubmitPage() {
     }));
   }
 
-  // ✅ STRONG YouTube parser
   function getYouTubeThumbnail(url) {
-    if (!url) return null;
+    if (!url) return "";
 
     try {
       const regex =
@@ -41,10 +41,60 @@ export default function SubmitPage() {
 
       return videoId
         ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-        : null;
+        : "";
     } catch {
-      return null;
+      return "";
     }
+  }
+
+  function getBunnyVideoId(value) {
+    if (!value) return null;
+
+    const cleanValue = value.trim();
+
+    if (/^[a-f0-9-]{36}$/i.test(cleanValue)) {
+      return cleanValue;
+    }
+
+    const match = cleanValue.match(
+      /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
+    );
+
+    return match ? match[2] : null;
+  }
+
+  function getBunnyLibraryId(value) {
+    if (!value) return BUNNY_LIBRARY_ID;
+
+    const match = value.trim().match(
+      /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
+    );
+
+    return match ? match[1] : BUNNY_LIBRARY_ID;
+  }
+
+  function normalizeVideoUrl(value) {
+    const cleanValue = value.trim();
+
+    const bunnyVideoId = getBunnyVideoId(cleanValue);
+    const bunnyLibraryId = getBunnyLibraryId(cleanValue);
+
+    if (/^[a-f0-9-]{36}$/i.test(cleanValue)) {
+      return `https://player.mediadelivery.net/play/${bunnyLibraryId}/${bunnyVideoId}`;
+    }
+
+    return cleanValue;
+  }
+
+  function getBunnyThumbnail(value) {
+    if (!value) return "";
+
+    const bunnyVideoId = getBunnyVideoId(value);
+    const bunnyLibraryId = getBunnyLibraryId(value);
+
+    if (!bunnyVideoId) return "";
+
+    return `https://vz-${bunnyLibraryId}.b-cdn.net/${bunnyVideoId}/thumbnail.jpg`;
   }
 
   async function handleSubmit(e) {
@@ -60,13 +110,13 @@ export default function SubmitPage() {
 
       const supabase = getSupabase();
 
-      const isYouTube =
-        form.video_url.includes("youtube") ||
-        form.video_url.includes("youtu.be");
+      const normalizedVideoUrl = normalizeVideoUrl(form.video_url);
 
       const thumbnail =
-        form.thumbnail_url ||
-        (isYouTube ? getYouTubeThumbnail(form.video_url) : "");
+        form.thumbnail_url.trim() ||
+        getBunnyThumbnail(form.video_url) ||
+        getYouTubeThumbnail(form.video_url) ||
+        "";
 
       const { error } = await supabase.from("films").insert([
         {
@@ -74,9 +124,9 @@ export default function SubmitPage() {
           creator: form.creator.trim(),
           description: form.description.trim(),
           genre: form.genre.trim(),
-          year: form.year,
+          year: form.year.trim(),
           thumbnail_url: thumbnail,
-          video_url: form.video_url.trim(),
+          video_url: normalizedVideoUrl,
         },
       ]);
 
@@ -96,8 +146,6 @@ export default function SubmitPage() {
     }
   }
 
-  // ✅ FIXED preview logic
-  
   return (
     <div
       style={{
@@ -192,7 +240,7 @@ export default function SubmitPage() {
 
           <input
             name="video_url"
-            placeholder="Video URL (Cloudinary, YouTube, Vimeo)"
+            placeholder="Bunny Video ID or Video URL (Bunny.net, YouTube, Vimeo)"
             value={form.video_url}
             onChange={updateField}
             style={inputStyle}
@@ -200,13 +248,12 @@ export default function SubmitPage() {
 
           <input
             name="thumbnail_url"
-            placeholder="Thumbnail URL (optional)"
+            placeholder="Thumbnail URL (optional — Bunny/YouTube can auto-generate)"
             value={form.thumbnail_url}
             onChange={updateField}
             style={inputStyle}
           />
 
-          {/* ✅ FIXED THUMBNAIL PREVIEW */}
           <button
             type="submit"
             disabled={loading}
