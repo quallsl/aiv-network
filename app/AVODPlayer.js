@@ -6,18 +6,42 @@ import Hls from "hls.js";
 const TEST_VAST_TAG =
   "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&cust_params=sample_ct%3Dlinear&gdfp_req=1&output=vast&env=vp&unviewed_position_start=1&impl=s&correlator=";
 
-function loadHlsVideo(videoElement, src) {
+function loadHlsVideo(videoElement, src, autoPlay) {
   if (!videoElement || !src) return null;
 
   if (Hls.isSupported()) {
     const hls = new Hls();
     hls.loadSource(src);
     hls.attachMedia(videoElement);
+
+    // autoPlay attribute doesn't reliably fire for MSE-attached sources —
+    // explicitly play once the manifest is actually parsed and ready.
+    if (autoPlay) {
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoElement.muted = true;
+        const playPromise = videoElement.play();
+        if (playPromise) playPromise.catch(() => {});
+      });
+    }
+
     return hls;
   }
 
   if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
     videoElement.src = src;
+
+    if (autoPlay) {
+      videoElement.muted = true;
+      videoElement.addEventListener(
+        "loadedmetadata",
+        () => {
+          const playPromise = videoElement.play();
+          if (playPromise) playPromise.catch(() => {});
+        },
+        { once: true }
+      );
+    }
+
     return null;
   }
 
@@ -25,7 +49,7 @@ function loadHlsVideo(videoElement, src) {
   return null;
 }
 
-export default function AVODPlayer({ src, vastTag }) {
+export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
   const videoRef = useRef(null);
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
@@ -47,11 +71,13 @@ export default function AVODPlayer({ src, vastTag }) {
   const playerSrc = useMemo(() => {
     if (isYouTube) {
       const id = getYouTubeId(cleanSrc);
-      return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0` : "";
+      return id
+        ? `https://www.youtube.com/embed/${id}?autoplay=${autoPlay ? 1 : 0}&mute=${autoPlay ? 1 : 0}&rel=0`
+        : "";
     }
 
     return cleanSrc;
-  }, [cleanSrc, isYouTube]);
+  }, [cleanSrc, isYouTube, autoPlay]);
 
   // Attach hls.js for Bunny/HLS streams
   useEffect(() => {
@@ -59,12 +85,12 @@ export default function AVODPlayer({ src, vastTag }) {
 
     if (!video || !isHLS || isYouTube) return;
 
-    const hls = loadHlsVideo(video, playerSrc);
+    const hls = loadHlsVideo(video, playerSrc, autoPlay);
 
     return () => {
       if (hls) hls.destroy();
     };
-  }, [playerSrc, isHLS, isYouTube]);
+  }, [playerSrc, isHLS, isYouTube, autoPlay]);
 
   // Google IMA ad insertion (Bunny/native video only, not YouTube)
   useEffect(() => {
