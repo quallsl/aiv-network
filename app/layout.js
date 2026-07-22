@@ -2,34 +2,35 @@ import "./globals.css";
 import Script from "next/script";
 
 export const metadata = {
-  title: "AIV Network",
-  description:
-    "A Netflix-style streaming experience for AI films and AIV Originals.",
-  applicationName: "AIV Network",
-  metadataBase: new URL("https://aivnetwork.online"),
+  title: "AIV Network",
+  description:
+    "A Netflix-style streaming experience for AI films and AIV Originals.",
+  applicationName: "AIV Network",
+  metadataBase: new URL("https://aivnetwork.online"),
 };
 
 export default function RootLayout({ children }) {
-  return (
-    <html lang="en">
-      <body>
-        {/* Google IMA SDK */}
-        <Script
-          src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"
-          strategy="beforeInteractive"
-        />
+  return (
+    <html lang="en">
+      <head>
+        {/* Google AdSense */}
+        <Script
+          id="adsense-script"
+          async
+          strategy="beforeInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4013153499723354"
+          crossOrigin="anonymous"
+        />
+      </head>
+      <body>
+        {/* Google IMA SDK */}
+        <Script
+          src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"
+          strategy="beforeInteractive"
+        />
 
-        {/* Google AdSense */}
-        <Script
-          id="adsense-script"
-          async
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4013153499723354"
-          crossOrigin="anonymous"
-        />
-
-        {children}
-      </body>
-    </html>
-  );
+        {children}
+      </body>
+    </html>
+  );
 }
