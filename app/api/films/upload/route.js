@@ -36,7 +36,6 @@ export async function POST(request) {
   const genre = formData.get("genre");
   const creator = formData.get("creator");
   const email = formData.get("email");
-  const userId = formData.get("userId");
 
   if (!file || !title || !email) {
     return NextResponse.json({ error: "Missing file, title, or email" }, { status: 400 });
@@ -79,7 +78,6 @@ export async function POST(request) {
     genre,
     creator,
     artist_id: artistId,
-    user_id: userId || null,
     video_url: `https://player.mediadelivery.net/embed/${BUNNY_LIBRARY_ID}/${videoId}`,
     status: "pending",
   });
