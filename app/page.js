@@ -128,27 +128,6 @@ export default function Page() {
     return matchesSearch && matchesCategory;
   });
 
-  const trendingFilms = filteredFilms.filter((film) => film.trending);
-  const newReleaseFilms = filteredFilms.filter((film) => film.new_release);
-  const originalFilms = filteredFilms.filter((film) => film.aiv_original);
-
-  const categories = {
-    Trending:
-      trendingFilms.length > 0
-        ? trendingFilms
-        : filteredFilms.slice(0, 10),
-
-    "New Releases":
-      newReleaseFilms.length > 0
-        ? newReleaseFilms
-        : filteredFilms.slice(0, 10),
-
-    "AIV Originals":
-      originalFilms.length > 0
-        ? originalFilms
-        : filteredFilms.slice(0, 10),
-  };
-
   return (
     <div
       style={{
@@ -342,231 +321,186 @@ export default function Page() {
         </div>
       )}
 
-      {/* FILM ROWS */}
-      {Object.entries(categories).map(
-        ([section, list], sectionIndex) => (
-          <div
-            key={section}
-            style={{
-              padding: "20px",
-              paddingTop: sectionIndex === 0 ? "8px" : "20px",
-            }}
-          >
-            <h2
-              style={{
-                marginBottom: "10px",
-              }}
-            >
-              {section}
-            </h2>
+      {/* FILM GRID */}
+      <div style={{ padding: "20px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "16px",
+          }}
+        >
+          {filteredFilms.slice(0, 24).map((film) => {
+            const url = film.video_url || "";
+            const youtubeVideo = isYouTubeUrl(url);
+            const thumbnail = getThumbnail(film);
+            const previewUrl = youtubeVideo ? null : getBunnyPreviewUrl(url);
+            const isExpanded = expandedFilm === film.id;
+            const isHovered = hovered === film.id;
+            const showDetails = isHovered || isExpanded;
 
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                overflowX: "auto",
-                overflowY: "visible",
-                paddingTop: "20px",
-                paddingBottom: "40px",
-              }}
-            >
-              {list.map((film) => {
-                const url = film.video_url || "";
-                const youtubeVideo = isYouTubeUrl(url);
-                const thumbnail = getThumbnail(film);
-
-                const previewUrl = youtubeVideo
-                  ? null
-                  : getBunnyPreviewUrl(url);
-
-                const isExpanded = expandedFilm === film.id;
-                const isHovered = hovered === film.id;
-                const showDetails = isHovered || isExpanded;
-
-                return (
-                  <div
-                    key={`${section}-${film.id}`}
-                    onClick={() => {
-                      if (isExpanded) {
-                        setActiveFilm(film);
-                      } else {
-                        setExpandedFilm(film.id);
-                      }
-                    }}
-                    onMouseEnter={() => setHovered(film.id)}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      position: "relative",
-                      flexShrink: 0,
-                      width: showDetails ? "320px" : "200px",
-                      transition: "all 0.25s ease",
-                      zIndex: showDetails ? 999 : 1,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {youtubeVideo ? (
-                      <img
-                        src={thumbnail}
-                        alt={film.title || "Film"}
-                        onError={(event) => {
-                          event.currentTarget.src =
-                            FALLBACK_THUMBNAIL;
-                        }}
-                        style={{
-                          width: "100%",
-                          height: showDetails
-                            ? "180px"
-                            : "120px",
-                          objectFit: "cover",
-                          borderRadius: showDetails
-                            ? "6px 6px 0 0"
-                            : "6px",
-                          background: "#222",
-                        }}
-                      />
-                    ) : (
-                      <video
-                        src={
-                          showDetails
-                            ? previewUrl
-                            : undefined
-                        }
-                        muted
-                        loop
-                        playsInline
-                        autoPlay={showDetails}
-                        controls={false}
-                        poster={thumbnail}
-                        style={{
-                          width: "100%",
-                          height: showDetails
-                            ? "180px"
-                            : "120px",
-                          objectFit: "cover",
-                          borderRadius: showDetails
-                            ? "6px 6px 0 0"
-                            : "6px",
-                          background: "#222",
-                        }}
-                      />
-                    )}
-
-                    {showDetails && (
-                      <div
-                        style={{
-                          background: "#181818",
-                          padding: "16px",
-                          borderRadius: "0 0 8px 8px",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px",
-                          boxShadow:
-                            "0 12px 28px rgba(0,0,0,0.7)",
-                        }}
-                      >
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: "24px",
-                            fontWeight: 700,
-                            lineHeight: 1.2,
-                            color: "#fff",
-                          }}
-                        >
-                          {film.title || "Untitled Film"}
-                        </h3>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                            fontSize: "15px",
-                            color: "#cfcfcf",
-                          }}
-                        >
-                          <span>
-                            👁 {film.views || 0} views
-                          </span>
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: "18px",
-                            fontWeight: 600,
-                            color: "#fff",
-                          }}
-                        >
-                          {film.creator ||
-                            "Independent Creator"}
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            flexWrap: "wrap",
-                            fontSize: "15px",
-                            color: "#b5b5b5",
-                          }}
-                        >
-                          <span>
-                            {film.genre || "AI Film"}
-                          </span>
-
-                          {(film.release_year ||
-                            film.year) && (
-                            <span>
-                              •{" "}
-                              {film.release_year ||
-                                film.year}
-                            </span>
-                          )}
-                        </div>
-
-                        {film.description && (
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "15px",
-                              lineHeight: 1.5,
-                              color: "#d8d8d8",
-                            }}
-                          >
-                            {film.description}
-                          </p>
-                        )}
-
-                        <div
-                          style={{
-                            marginTop: "6px",
-                            fontSize: "15px",
-                            fontWeight: 700,
-                            color: "#fff",
-                          }}
-                        >
-                          Click again to play fullscreen
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {list.length === 0 && (
+            return (
               <div
+                key={film.id}
+                onClick={() => {
+                  if (isExpanded) {
+                    setActiveFilm(film);
+                  } else {
+                    setExpandedFilm(film.id);
+                  }
+                }}
+                onMouseEnter={() => setHovered(film.id)}
+                onMouseLeave={() => setHovered(null)}
                 style={{
-                  color: "#999",
-                  marginTop: "10px",
+                  position: "relative",
+                  transition: "all 0.25s ease",
+                  zIndex: showDetails ? 999 : 1,
+                  cursor: "pointer",
                 }}
               >
-                No films found.
+                <div
+                  style={{
+                    position: "relative",
+                    width: "100%",
+                    height: "150px",
+                    borderRadius: "6px",
+                    overflow: "hidden",
+                    background: "#222",
+                  }}
+                >
+                  <img
+                    src={thumbnail}
+                    alt={film.title || "Film"}
+                    onError={(event) => {
+                      event.currentTarget.src = FALLBACK_THUMBNAIL;
+                    }}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+
+                  {showDetails && !youtubeVideo && previewUrl && (
+                    <video
+                      src={previewUrl}
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                      controls={false}
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  )}
+                </div>
+
+                {showDetails && (
+                  <div
+                    style={{
+                      background: "#181818",
+                      padding: "12px",
+                      borderRadius: "0 0 8px 8px",
+                      boxShadow: "0 12px 28px rgba(0,0,0,0.7)",
+                      position: "absolute",
+                      top: "150px",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "230px",
+                      zIndex: 999,
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 6px",
+                        fontSize: "15px",
+                        fontWeight: 700,
+                        lineHeight: 1.3,
+                        color: "#fff",
+                      }}
+                    >
+                      {film.title || "Untitled Film"}
+                    </h3>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#b5b5b5",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {film.creator || "Independent Creator"}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#999",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {film.genre || "AI Film"}
+                      {(film.release_year || film.year) &&
+                        ` • ${film.release_year || film.year}`}
+                      {" • 👁 "}
+                      {film.views || 0}
+                    </div>
+
+                    {film.description && (
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "12.5px",
+                          lineHeight: 1.4,
+                          color: "#d8d8d8",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {film.description}
+                      </p>
+                    )}
+
+                    <div
+                      style={{
+                        marginTop: "8px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        color: "#e50914",
+                      }}
+                    >
+                      Click again to play fullscreen
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })}
+        </div>
+
+        {filteredFilms.length === 0 && (
+          <div
+            style={{
+              color: "#999",
+              marginTop: "10px",
+            }}
+          >
+            No films found.
           </div>
-        )
-      )}
+        )}
+      </div>
     </div>
   );
 }
