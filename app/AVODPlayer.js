@@ -111,19 +111,23 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     let adDisplayContainer = null;
 
         function playContent() {
-      video.controls = true;
+  video.controls = true;
 
-      if (autoPlay) {
-        video.muted = true;
-      }
+  if (autoPlay) {
+    video.muted = true;
+  }
 
-      const playPromise = video.play();
-      if (playPromise) {
-        playPromise.catch((err) => {
-          console.warn("Resume playback blocked:", err);
-        });
-      }
-    }
+  // iOS Safari sometimes loses its play-readiness after IMA ad teardown
+  video.load();
+
+  const playPromise = video.play();
+  if (playPromise) {
+    playPromise.catch((err) => {
+      console.warn("Resume playback blocked:", err);
+    });
+  }
+}
+
 
     function startAds() {
       if (adsStartedRef.current) return;
