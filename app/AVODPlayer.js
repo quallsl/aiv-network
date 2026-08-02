@@ -158,11 +158,11 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
             );
 
             adsManager.addEventListener(
-              window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
-              () => {
-                playContent();
-              }
-            );
+  window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
+  () => {
+    setTimeout(playContent, 150);
+  }
+);
 
             try {
               adDisplayContainer.initialize();
