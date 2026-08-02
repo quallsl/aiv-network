@@ -110,11 +110,20 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     let adsManager = null;
     let adDisplayContainer = null;
 
-    function playContent() {
-      video.controls = true;
-      const playPromise = video.play();
-      if (playPromise) playPromise.catch(() => {});
-    }
+        function playContent() {
+      video.controls = true;
+
+      if (autoPlay) {
+        video.muted = true;
+      }
+
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise.catch((err) => {
+          console.warn("Resume playback blocked:", err);
+        });
+      }
+    }
 
     function startAds() {
       if (adsStartedRef.current) return;
