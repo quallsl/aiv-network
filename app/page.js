@@ -261,11 +261,12 @@ export default function Page() {
         }}
       >
         <AVODPlayer
-          autoPlay
-          src={getBunnyStreamUrl(
-            "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
-          )}
-        />
+  autoPlay
+  debug
+  src={getBunnyStreamUrl(
+    "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
+  )}
+/>
       </div>
 
       {/* FULLSCREEN PLAYER */}

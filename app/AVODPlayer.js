@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 
 const TEST_VAST_TAG =
@@ -14,8 +14,6 @@ function loadHlsVideo(videoElement, src, autoPlay) {
     hls.loadSource(src);
     hls.attachMedia(videoElement);
 
-    // autoPlay attribute doesn't reliably fire for MSE-attached sources —
-    // explicitly play once the manifest is actually parsed and ready.
     if (autoPlay) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoElement.muted = true;
@@ -49,10 +47,16 @@ function loadHlsVideo(videoElement, src, autoPlay) {
   return null;
 }
 
-export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
+export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = false }) {
   const videoRef = useRef(null);
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
+  const [debugLog, setDebugLog] = useState([]);
+
+  function logDebug(msg) {
+    if (!debug) return;
+    setDebugLog((prev) => [...prev.slice(-9), `${new Date().toLocaleTimeString()} ${msg}`]);
+  }
 
   const cleanSrc = src || "";
 
@@ -79,12 +83,12 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     return cleanSrc;
   }, [cleanSrc, isYouTube, autoPlay]);
 
-  // Attach hls.js for Bunny/HLS streams
   useEffect(() => {
     const video = videoRef.current;
 
     if (!video || !isHLS || isYouTube) return;
 
+    logDebug("attaching hls.js");
     const hls = loadHlsVideo(video, playerSrc, autoPlay);
 
     return () => {
@@ -92,7 +96,6 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     };
   }, [playerSrc, isHLS, isYouTube, autoPlay]);
 
-  // Google IMA ad insertion (Bunny/native video only, not YouTube)
   useEffect(() => {
     const video = videoRef.current;
     const adContainer = adContainerRef.current;
@@ -102,6 +105,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     if (isYouTube) return;
 
     if (typeof window === "undefined" || !window.google?.ima) {
+      logDebug("IMA SDK not loaded");
       console.warn("Google IMA SDK not loaded. Playing content only.");
       return;
     }
@@ -110,28 +114,26 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     let adsManager = null;
     let adDisplayContainer = null;
 
-        function playContent() {
-  video.controls = true;
+    function playContent() {
+      logDebug("playContent() called");
+      video.controls = true;
 
-  if (autoPlay) {
-    video.muted = true;
-  }
+      if (autoPlay) {
+        video.muted = true;
+      }
 
-  // iOS Safari sometimes loses its play-readiness after IMA ad teardown
-  video.load();
-
-  const playPromise = video.play();
-  if (playPromise) {
-    playPromise.catch((err) => {
-      console.warn("Resume playback blocked:", err);
-    });
-  }
-}
-
+      const playPromise = video.play();
+      if (playPromise) {
+        playPromise
+          .then(() => logDebug("play() succeeded"))
+          .catch((err) => logDebug(`play() BLOCKED: ${err.name} ${err.message}`));
+      }
+    }
 
     function startAds() {
       if (adsStartedRef.current) return;
       adsStartedRef.current = true;
+      logDebug("startAds() fired");
 
       try {
         adDisplayContainer = new window.google.ima.AdDisplayContainer(
@@ -144,11 +146,13 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
         adsLoader.addEventListener(
           window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
           (event) => {
+            logDebug("ADS_MANAGER_LOADED");
             adsManager = event.getAdsManager(video);
 
             adsManager.addEventListener(
               window.google.ima.AdErrorEvent.Type.AD_ERROR,
-              () => {
+              (e) => {
+                logDebug(`AD_ERROR: ${e?.getError?.()?.getMessage?.() || "unknown"}`);
                 console.warn("IMA ad error. Playing content.");
                 playContent();
               }
@@ -157,16 +161,25 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
             adsManager.addEventListener(
               window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED,
               () => {
+                logDebug("CONTENT_PAUSE_REQUESTED");
                 video.pause();
               }
             );
 
             adsManager.addEventListener(
-  window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
-  () => {
-    setTimeout(playContent, 150);
-  }
-);
+              window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
+              () => {
+                logDebug("CONTENT_RESUME_REQUESTED");
+                playContent();
+              }
+            );
+
+            adsManager.addEventListener(
+              window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED,
+              () => {
+                logDebug("ALL_ADS_COMPLETED");
+              }
+            );
 
             try {
               adDisplayContainer.initialize();
@@ -178,7 +191,9 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
               );
 
               adsManager.start();
+              logDebug("adsManager.start() called");
             } catch (err) {
+              logDebug(`adsManager init/start FAILED: ${err.message}`);
               console.warn("AdsManager failed. Playing content.", err);
               playContent();
             }
@@ -188,7 +203,8 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
 
         adsLoader.addEventListener(
           window.google.ima.AdErrorEvent.Type.AD_ERROR,
-          () => {
+          (e) => {
+            logDebug(`AdsLoader AD_ERROR: ${e?.getError?.()?.getMessage?.() || "unknown"}`);
             console.warn("IMA ad load failed. Playing content.");
             playContent();
           },
@@ -208,7 +224,9 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
         adsRequest.nonLinearAdSlotHeight = 150;
 
         adsLoader.requestAds(adsRequest);
+        logDebug("requestAds() called");
       } catch (err) {
+        logDebug(`IMA setup CRASHED: ${err.message}`);
         console.warn("IMA setup failed. Playing content.", err);
         playContent();
       }
@@ -252,6 +270,13 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
         style={styles.player}
       />
       <div ref={adContainerRef} style={styles.adLayer} />
+      {debug && (
+        <div style={styles.debugOverlay}>
+          {debugLog.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -274,6 +299,21 @@ const styles = {
     position: "absolute",
     inset: 0,
     zIndex: 5,
+    pointerEvents: "none",
+  },
+  debugOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    background: "rgba(0,0,0,0.85)",
+    color: "#0f0",
+    fontSize: "10px",
+    fontFamily: "monospace",
+    padding: "6px",
+    maxHeight: "40%",
+    overflowY: "auto",
     pointerEvents: "none",
   },
   empty: {
