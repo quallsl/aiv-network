@@ -51,6 +51,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
   const videoRef = useRef(null);
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
+  const hlsRef = useRef(null); // shared so the ad-resume handler can nudge it
   const [debugLog, setDebugLog] = useState([]);
 
   function logDebug(msg) {
@@ -90,9 +91,11 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
 
     logDebug("attaching hls.js");
     const hls = loadHlsVideo(video, playerSrc, autoPlay);
+    hlsRef.current = hls;
 
     return () => {
       if (hls) hls.destroy();
+      hlsRef.current = null;
     };
   }, [playerSrc, isHLS, isYouTube, autoPlay]);
 
@@ -120,6 +123,17 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
 
       if (autoPlay) {
         video.muted = true;
+      }
+
+      // HLS buffer often stalls after sitting paused during the ad —
+      // nudge hls.js to resume loading segments before calling play().
+      if (isHLS && hlsRef.current) {
+        try {
+          hlsRef.current.startLoad();
+          logDebug("hls.startLoad() called");
+        } catch (err) {
+          logDebug(`hls.startLoad() failed: ${err.message}`);
+        }
       }
 
       const playPromise = video.play();
@@ -241,7 +255,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
         if (adsLoader) adsLoader.destroy();
       } catch {}
     };
-  }, [cleanSrc, isYouTube, vastTag]);
+  }, [cleanSrc, isYouTube, vastTag, isHLS]);
 
   if (!cleanSrc) {
     return <div style={styles.empty}>No video source</div>;
@@ -325,4 +339,4 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-};
+};;
