@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Hls from "hls.js";
 
 const TEST_VAST_TAG =
@@ -47,17 +47,11 @@ function loadHlsVideo(videoElement, src, autoPlay) {
   return null;
 }
 
-export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = false }) {
+export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
   const videoRef = useRef(null);
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
-  const hlsRef = useRef(null); // shared so the ad-resume handler can nudge it
-  const [debugLog, setDebugLog] = useState([]);
-
-  function logDebug(msg) {
-    if (!debug) return;
-    setDebugLog((prev) => [...prev.slice(-9), `${new Date().toLocaleTimeString()} ${msg}`]);
-  }
+  const hlsRef = useRef(null);
 
   const cleanSrc = src || "";
 
@@ -89,7 +83,6 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
 
     if (!video || !isHLS || isYouTube) return;
 
-    logDebug("attaching hls.js");
     const hls = loadHlsVideo(video, playerSrc, autoPlay);
     hlsRef.current = hls;
 
@@ -108,7 +101,6 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
     if (isYouTube) return;
 
     if (typeof window === "undefined" || !window.google?.ima) {
-      logDebug("IMA SDK not loaded");
       console.warn("Google IMA SDK not loaded. Playing content only.");
       return;
     }
@@ -118,36 +110,39 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
     let adDisplayContainer = null;
 
     function playContent() {
-      logDebug("playContent() called");
       video.controls = true;
 
       if (autoPlay) {
         video.muted = true;
       }
 
-      // HLS buffer often stalls after sitting paused during the ad —
-      // nudge hls.js to resume loading segments before calling play().
       if (isHLS && hlsRef.current) {
         try {
           hlsRef.current.startLoad();
-          logDebug("hls.startLoad() called");
         } catch (err) {
-          logDebug(`hls.startLoad() failed: ${err.message}`);
+          console.warn("hls.startLoad() failed:", err);
         }
       }
 
       const playPromise = video.play();
       if (playPromise) {
         playPromise
-          .then(() => logDebug("play() succeeded"))
-          .catch((err) => logDebug(`play() BLOCKED: ${err.name} ${err.message}`));
+          .then(() => {
+            setTimeout(() => {
+              if (video.paused === false && video.currentTime === 0) {
+                video.currentTime = 0.1;
+              }
+            }, 500);
+          })
+          .catch((err) => {
+            console.warn("Resume playback blocked:", err);
+          });
       }
     }
 
     function startAds() {
       if (adsStartedRef.current) return;
       adsStartedRef.current = true;
-      logDebug("startAds() fired");
 
       try {
         adDisplayContainer = new window.google.ima.AdDisplayContainer(
@@ -160,13 +155,11 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
         adsLoader.addEventListener(
           window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
           (event) => {
-            logDebug("ADS_MANAGER_LOADED");
             adsManager = event.getAdsManager(video);
 
             adsManager.addEventListener(
               window.google.ima.AdErrorEvent.Type.AD_ERROR,
-              (e) => {
-                logDebug(`AD_ERROR: ${e?.getError?.()?.getMessage?.() || "unknown"}`);
+              () => {
                 console.warn("IMA ad error. Playing content.");
                 playContent();
               }
@@ -175,7 +168,6 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
             adsManager.addEventListener(
               window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED,
               () => {
-                logDebug("CONTENT_PAUSE_REQUESTED");
                 video.pause();
               }
             );
@@ -183,15 +175,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
             adsManager.addEventListener(
               window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
               () => {
-                logDebug("CONTENT_RESUME_REQUESTED");
                 playContent();
-              }
-            );
-
-            adsManager.addEventListener(
-              window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED,
-              () => {
-                logDebug("ALL_ADS_COMPLETED");
               }
             );
 
@@ -205,9 +189,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
               );
 
               adsManager.start();
-              logDebug("adsManager.start() called");
             } catch (err) {
-              logDebug(`adsManager init/start FAILED: ${err.message}`);
               console.warn("AdsManager failed. Playing content.", err);
               playContent();
             }
@@ -217,8 +199,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
 
         adsLoader.addEventListener(
           window.google.ima.AdErrorEvent.Type.AD_ERROR,
-          (e) => {
-            logDebug(`AdsLoader AD_ERROR: ${e?.getError?.()?.getMessage?.() || "unknown"}`);
+          () => {
             console.warn("IMA ad load failed. Playing content.");
             playContent();
           },
@@ -238,9 +219,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
         adsRequest.nonLinearAdSlotHeight = 150;
 
         adsLoader.requestAds(adsRequest);
-        logDebug("requestAds() called");
       } catch (err) {
-        logDebug(`IMA setup CRASHED: ${err.message}`);
         console.warn("IMA setup failed. Playing content.", err);
         playContent();
       }
@@ -284,13 +263,6 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false, debug = fal
         style={styles.player}
       />
       <div ref={adContainerRef} style={styles.adLayer} />
-      {debug && (
-        <div style={styles.debugOverlay}>
-          {debugLog.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -315,21 +287,6 @@ const styles = {
     zIndex: 5,
     pointerEvents: "none",
   },
-  debugOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 50,
-    background: "rgba(0,0,0,0.85)",
-    color: "#0f0",
-    fontSize: "10px",
-    fontFamily: "monospace",
-    padding: "6px",
-    maxHeight: "40%",
-    overflowY: "auto",
-    pointerEvents: "none",
-  },
   empty: {
     width: "100%",
     height: "100%",
@@ -339,4 +296,4 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
   },
-};;
+};
