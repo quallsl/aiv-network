@@ -6,7 +6,7 @@ import Hls from "hls.js";
 const TEST_VAST_TAG =
   "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&cust_params=sample_ct%3Dlinear&gdfp_req=1&output=vast&env=vp&unviewed_position_start=1&impl=s&correlator=";
 
-function loadHlsVideo(videoElement, src, autoPlay) {
+function attachHls(videoElement, src, autoPlay, onReady) {
   if (!videoElement || !src) return null;
 
   if (Hls.isSupported()) {
@@ -14,13 +14,15 @@ function loadHlsVideo(videoElement, src, autoPlay) {
     hls.loadSource(src);
     hls.attachMedia(videoElement);
 
-    if (autoPlay) {
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      if (onReady) {
+        onReady();
+      } else if (autoPlay) {
         videoElement.muted = true;
         const playPromise = videoElement.play();
         if (playPromise) playPromise.catch(() => {});
-      });
-    }
+      }
+    });
 
     return hls;
   }
@@ -28,17 +30,19 @@ function loadHlsVideo(videoElement, src, autoPlay) {
   if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
     videoElement.src = src;
 
-    if (autoPlay) {
-      videoElement.muted = true;
-      videoElement.addEventListener(
-        "loadedmetadata",
-        () => {
+    videoElement.addEventListener(
+      "loadedmetadata",
+      () => {
+        if (onReady) {
+          onReady();
+        } else if (autoPlay) {
+          videoElement.muted = true;
           const playPromise = videoElement.play();
           if (playPromise) playPromise.catch(() => {});
-        },
-        { once: true }
-      );
-    }
+        }
+      },
+      { once: true }
+    );
 
     return null;
   }
@@ -52,6 +56,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
   const hlsRef = useRef(null);
+  const savedTimeRef = useRef(0);
 
   const cleanSrc = src || "";
 
@@ -83,7 +88,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
 
     if (!video || !isHLS || isYouTube) return;
 
-    const hls = loadHlsVideo(video, playerSrc, autoPlay);
+    const hls = attachHls(video, playerSrc, autoPlay);
     hlsRef.current = hls;
 
     return () => {
@@ -112,31 +117,42 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     function playContent() {
       video.controls = true;
 
+      if (isHLS) {
+        savedTimeRef.current = video.currentTime || 0;
+
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
+        }
+
+        const hls = attachHls(video, playerSrc, autoPlay, () => {
+          if (savedTimeRef.current > 0) {
+            video.currentTime = savedTimeRef.current;
+          }
+          if (autoPlay) {
+            video.muted = true;
+          }
+          const playPromise = video.play();
+          if (playPromise) {
+            playPromise.catch((err) => {
+              console.warn("Resume playback blocked:", err);
+            });
+          }
+        });
+
+        hlsRef.current = hls;
+        return;
+      }
+
       if (autoPlay) {
         video.muted = true;
       }
 
-      if (isHLS && hlsRef.current) {
-        try {
-          hlsRef.current.startLoad();
-        } catch (err) {
-          console.warn("hls.startLoad() failed:", err);
-        }
-      }
-
       const playPromise = video.play();
       if (playPromise) {
-        playPromise
-          .then(() => {
-            setTimeout(() => {
-              if (video.paused === false && video.currentTime === 0) {
-                video.currentTime = 0.1;
-              }
-            }, 500);
-          })
-          .catch((err) => {
-            console.warn("Resume playback blocked:", err);
-          });
+        playPromise.catch((err) => {
+          console.warn("Resume playback blocked:", err);
+        });
       }
     }
 
@@ -234,7 +250,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
         if (adsLoader) adsLoader.destroy();
       } catch {}
     };
-  }, [cleanSrc, isYouTube, vastTag, isHLS]);
+  }, [cleanSrc, isYouTube, vastTag, isHLS, playerSrc, autoPlay]);
 
   if (!cleanSrc) {
     return <div style={styles.empty}>No video source</div>;
