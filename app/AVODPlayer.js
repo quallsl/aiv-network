@@ -24,6 +24,27 @@ function attachHls(videoElement, src, autoPlay, onReady) {
       }
     });
 
+    hls.on(Hls.Events.ERROR, (event, data) => {
+      console.error("HLS error:", data.type, data.details, data.fatal);
+
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.warn("Network error — retrying manifest load");
+            hls.startLoad();
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.warn("Media error — attempting recovery");
+            hls.recoverMediaError();
+            break;
+          default:
+            console.error("Unrecoverable HLS error, destroying instance");
+            hls.destroy();
+            break;
+        }
+      }
+    });
+
     return hls;
   }
 
