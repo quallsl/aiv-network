@@ -43,7 +43,7 @@ export default function SupportPage() {
               How do I submit a film?
             </h3>
             <p style={{ color: "#ccc", lineHeight: 1.6 }}>
-              Visit our{" "}
+              Create a filmmaker account, then visit our{" "}
               <a href="/submit" style={{ color: "#e50914" }}>
                 film submission page
               </a>{" "}
@@ -53,11 +53,23 @@ export default function SupportPage() {
 
           <div style={{ marginBottom: "20px" }}>
             <h3 style={{ fontSize: "16px", marginBottom: "6px" }}>
+              How do I create a filmmaker account?
+            </h3>
+            <p style={{ color: "#ccc", lineHeight: 1.6 }}>
+              Sign up with your email and a password. We'll send a
+              confirmation email — click the link inside it to activate your
+              account before signing in.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "16px", marginBottom: "6px" }}>
               Why am I seeing ads?
             </h3>
             <p style={{ color: "#ccc", lineHeight: 1.6 }}>
               AIV Network is a free, ad-supported streaming platform. Ads help
-              us keep the service free for everyone.
+              us keep the service free for everyone. Most ads can be skipped
+              after 5 seconds using the Skip button in the player.
             </p>
           </div>
 
@@ -77,12 +89,22 @@ export default function SupportPage() {
           <h2 style={{ fontSize: "20px", marginBottom: "10px" }}>
             Account &amp; Privacy
           </h2>
+          <p style={{ color: "#ccc", lineHeight: 1.6, marginBottom: "12px" }}>
+            You can delete your account at any time from your Account page.
+            When you do, you're signed out immediately and can no longer log
+            in or upload new films.
+          </p>
           <p style={{ color: "#ccc", lineHeight: 1.6 }}>
-            For account or data-related requests, contact{" "}
+            Films you've already uploaded remain live on AIV Network for{" "}
+            <strong>180 days</strong> after account deletion, then are
+            permanently removed. This delay exists so viewers don't lose
+            access to content abruptly and to give us time to process the
+            deletion correctly. If you'd like a film taken down sooner than
+            180 days, email{" "}
             <a href="mailto:support@aivnetwork.online" style={{ color: "#e50914" }}>
               support@aivnetwork.online
-            </a>
-            .
+            </a>{" "}
+            and we'll handle it manually.
           </p>
         </section>
       </div>
