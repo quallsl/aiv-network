@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 
 const TEST_VAST_TAG =
   "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&cust_params=sample_ct%3Dlinear&gdfp_req=1&output=vast&env=vp&unviewed_position_start=1&impl=s&correlator=";
+
+const SKIP_AFTER_SECONDS = 5;
 
 function attachHls(videoElement, src, autoPlay, onReady) {
   if (!videoElement || !src) return null;
@@ -76,8 +78,14 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
   const videoRef = useRef(null);
   const adContainerRef = useRef(null);
   const adsStartedRef = useRef(false);
+  const adsManagerRef = useRef(null);
   const hlsRef = useRef(null);
   const savedTimeRef = useRef(0);
+  const countdownTimerRef = useRef(null);
+
+  const [adPlaying, setAdPlaying] = useState(false);
+  const [skipCountdown, setSkipCountdown] = useState(SKIP_AFTER_SECONDS);
+  const [skipReady, setSkipReady] = useState(false);
 
   const cleanSrc = src || "";
 
@@ -135,7 +143,33 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     let adsManager = null;
     let adDisplayContainer = null;
 
+    function stopAdUI() {
+      setAdPlaying(false);
+      setSkipReady(false);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    }
+
+    function startSkipCountdown() {
+      setSkipCountdown(SKIP_AFTER_SECONDS);
+      setSkipReady(false);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = setInterval(() => {
+        setSkipCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownTimerRef.current);
+            setSkipReady(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
     function playContent() {
+      stopAdUI();
       video.controls = true;
 
       if (isHLS) {
@@ -193,6 +227,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
           window.google.ima.AdsManagerLoadedEvent.Type.ADS_MANAGER_LOADED,
           (event) => {
             adsManager = event.getAdsManager(video);
+            adsManagerRef.current = adsManager;
 
             adsManager.addEventListener(
               window.google.ima.AdErrorEvent.Type.AD_ERROR,
@@ -206,6 +241,9 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
               window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED,
               () => {
                 video.pause();
+                video.controls = false;
+                setAdPlaying(true);
+                startSkipCountdown();
               }
             );
 
@@ -213,6 +251,13 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
               window.google.ima.AdEvent.Type.CONTENT_RESUME_REQUESTED,
               () => {
                 playContent();
+              }
+            );
+
+            adsManager.addEventListener(
+              window.google.ima.AdEvent.Type.ALL_ADS_COMPLETED,
+              () => {
+                stopAdUI();
               }
             );
 
@@ -266,12 +311,23 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
 
     return () => {
       video.removeEventListener("play", startAds);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
       try {
         if (adsManager) adsManager.destroy();
         if (adsLoader) adsLoader.destroy();
       } catch {}
     };
   }, [cleanSrc, isYouTube, vastTag, isHLS, playerSrc, autoPlay]);
+
+  function handleSkip() {
+    if (adsManagerRef.current && skipReady) {
+      try {
+        adsManagerRef.current.stop();
+      } catch (err) {
+        console.warn("Skip failed:", err);
+      }
+    }
+  }
 
   if (!cleanSrc) {
     return <div style={styles.empty}>No video source</div>;
@@ -294,12 +350,38 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
       <video
         ref={videoRef}
         src={isHLS ? undefined : playerSrc}
-        controls
+        controls={!adPlaying}
         playsInline
         preload="metadata"
         style={styles.player}
       />
-      <div ref={adContainerRef} style={styles.adLayer} />
+      <div
+        ref={adContainerRef}
+        style={{
+          ...styles.adLayer,
+          pointerEvents: adPlaying ? "auto" : "none",
+        }}
+      />
+
+      {adPlaying && (
+        <>
+          <div style={styles.adLabel}>Advertisement</div>
+
+          <button
+            onClick={handleSkip}
+            disabled={!skipReady}
+            style={{
+              ...styles.skipButton,
+              background: skipReady
+                ? "rgba(0,0,0,0.85)"
+                : "rgba(0,0,0,0.5)",
+              cursor: skipReady ? "pointer" : "default",
+            }}
+          >
+            {skipReady ? "Skip Ad ▶" : `Skip in ${skipCountdown}s`}
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -322,7 +404,35 @@ const styles = {
     position: "absolute",
     inset: 0,
     zIndex: 5,
+  },
+  adLabel: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    background: "rgba(0,0,0,0.7)",
+    color: "#fff",
+    fontSize: 12,
+    padding: "3px 8px",
+    borderRadius: 4,
+    fontWeight: 600,
+    letterSpacing: 0.5,
     pointerEvents: "none",
+    zIndex: 10,
+  },
+  skipButton: {
+    position: "absolute",
+    bottom: 14,
+    right: 14,
+    color: "#fff",
+    border: "1px solid rgba(255,255,255,0.4)",
+    borderRadius: 4,
+    padding: "6px 12px",
+    fontSize: 13,
+    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    zIndex: 10,
   },
   empty: {
     width: "100%",
