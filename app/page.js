@@ -435,9 +435,10 @@ export default function Page() {
                       boxShadow: "0 12px 28px rgba(0,0,0,0.7)",
                       position: "absolute",
                       top: "150px",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      width: "230px",
+                      left: 0,
+                      right: 0,
+                      width: "100%",
+                      boxSizing: "border-box",
                       zIndex: 999,
                     }}
                   >
