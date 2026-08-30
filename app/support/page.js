@@ -26,9 +26,40 @@ const linkStyle = {
   textDecoration: "underline",
 };
 
+const topBarStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: "12px",
+  padding: "10px",
+  background: "#111",
+  position: "sticky",
+  top: 0,
+  zIndex: 100,
+};
+
+const homeButtonStyle = {
+  background: "#e50914",
+  color: "#fff",
+  border: "none",
+  padding: "8px 12px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
+  textDecoration: "none",
+  display: "inline-block",
+};
+
 export default function SupportPage() {
   return (
-    <div style={pageStyle}>
+    <div style={{ background: "#000", minHeight: "100vh" }}>
+      <div style={topBarStyle}>
+        <a href="/" style={homeButtonStyle}>
+          ← Home
+        </a>
+      </div>
+
+      <div style={pageStyle}>
       <div style={{ width: "100%", maxWidth: "700px", textAlign: "left" }}>
         <h1 style={{ fontSize: "36px", marginBottom: "10px" }}>Support</h1>
         <p style={{ color: "#999", marginBottom: "40px", textAlign: "left" }}>
@@ -121,6 +152,7 @@ export default function SupportPage() {
             and we'll handle it manually.
           </p>
         </section>
+      </div>
       </div>
     </div>
   );
