@@ -7,16 +7,18 @@ import { getSupabase } from "../lib/supabase";
 
 const BUNNY_CDN_HOSTNAME = "vz-b7971a5e-657.b-cdn.net";
 const FALLBACK_THUMBNAIL = "/no-preview.png";
+const BG = "#141414";
+const CARD_BG = "#181818";
+const ACCENT = "#e50914";
+const TEXT_SECONDARY = "#b3b3b3";
+const TEXT_MUTED = "#808080";
 
 function parseBunnyUrl(url) {
   if (!url) return null;
-
   const match = url.match(
     /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
   );
-
   if (!match) return null;
-
   const [, libraryId, videoId] = match;
   return { libraryId, videoId };
 }
@@ -24,37 +26,25 @@ function parseBunnyUrl(url) {
 function getBunnyStreamUrl(url) {
   const parsed = parseBunnyUrl(url);
   if (!parsed) return url;
-
   return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/playlist.m3u8`;
-}
-
-function getBunnyPreviewUrl(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return url;
-
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/play_480p.mp4`;
 }
 
 function getBunnyThumbnail(url) {
   const parsed = parseBunnyUrl(url);
   if (!parsed) return null;
-
   return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/thumbnail.jpg`;
 }
 
 function getYouTubeId(url) {
   if (!url) return null;
-
   const regex =
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
-
   const match = url.match(regex);
   return match ? match[1] : null;
 }
 
 function getYouTubeThumbnail(url) {
   const videoId = getYouTubeId(url);
-
   return videoId
     ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
     : null;
@@ -64,14 +54,8 @@ function isYouTubeUrl(url) {
   return Boolean(url?.includes("youtube.com") || url?.includes("youtu.be"));
 }
 
-// Builds an ordered list of candidate thumbnail URLs for a film and
-// tries each one in turn, falling through to the next on load failure.
-// This handles cases where one source (stored URL, computed Bunny path,
-// etc.) is broken for a given film but another source works fine —
-// picking a single "best guess" ahead of time can't account for that.
 function FilmThumbnail({ film, alt, style }) {
   const url = film?.video_url || "";
-
   const candidates = [
     film?.thumbnail_url,
     getYouTubeThumbnail(url),
@@ -80,21 +64,13 @@ function FilmThumbnail({ film, alt, style }) {
   ].filter(Boolean);
 
   const [index, setIndex] = useState(0);
-
   const currentSrc = candidates[index] || FALLBACK_THUMBNAIL;
 
   function handleError() {
     setIndex((prev) => (prev + 1 < candidates.length ? prev + 1 : prev));
   }
 
-  return (
-    <img
-      src={currentSrc}
-      alt={alt}
-      onError={handleError}
-      style={style}
-    />
-  );
+  return <img src={currentSrc} alt={alt} onError={handleError} style={style} />;
 }
 
 export default function Page() {
@@ -102,9 +78,7 @@ export default function Page() {
   const [films, setFilms] = useState([]);
   const [hovered, setHovered] = useState(null);
   const [activeFilm, setActiveFilm] = useState(null);
-  const [expandedFilm, setExpandedFilm] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory] = useState("All");
 
   const router = useRouter();
 
@@ -115,7 +89,6 @@ export default function Page() {
   async function loadFilms() {
     try {
       const supabase = getSupabase();
-
       const { data, error } = await supabase
         .from("films")
         .select("*")
@@ -125,7 +98,6 @@ export default function Page() {
         console.error("Supabase load error:", error);
         return;
       }
-
       setFilms(data || []);
     } catch (error) {
       console.error("Load films error:", error);
@@ -134,54 +106,35 @@ export default function Page() {
 
   const filteredFilms = films.filter((film) => {
     const query = searchTerm.trim().toLowerCase();
-
-    const matchesSearch =
+    return (
       !query ||
       film.title?.toLowerCase().includes(query) ||
       film.creator?.toLowerCase().includes(query) ||
       film.genre?.toLowerCase().includes(query) ||
-      film.description?.toLowerCase().includes(query);
-
-    const matchesCategory =
-      selectedCategory === "All" ||
-      film.genre?.toLowerCase() === selectedCategory.toLowerCase();
-
-    return matchesSearch && matchesCategory;
+      film.description?.toLowerCase().includes(query)
+    );
   });
 
   return (
-    <div
-      style={{
-        background: "#000",
-        color: "#fff",
-        minHeight: "100vh",
-      }}
-    >
+    <div style={{ background: BG, color: "#fff", minHeight: "100vh" }}>
       {/* TOP BAR */}
       <div
         style={{
           display: "flex",
-          gap: "6px",
-          padding: "10px",
+          gap: "10px",
+          padding: "14px 24px",
           alignItems: "center",
-          background: "#111",
+          background: "rgba(20,20,20,0.95)",
           position: "sticky",
           top: 0,
           zIndex: 9999,
+          borderBottom: "1px solid #2a2a2a",
         }}
       >
         <button
           type="button"
-          onClick={() => setShowMenu((current) => !current)}
-          style={{
-            background: "#e50914",
-            color: "#fff",
-            border: "none",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-          }}
+          onClick={() => setShowMenu((c) => !c)}
+          style={topBarButtonPrimary}
         >
           ☰ Menu
         </button>
@@ -190,64 +143,39 @@ export default function Page() {
           aria-label="Search films"
           placeholder="Search films..."
           value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
-            padding: "8px",
+            padding: "9px 12px",
             width: "230px",
             maxWidth: "42vw",
             background: "#222",
             color: "#fff",
-            border: "1px solid #444",
+            border: "1px solid #333",
             borderRadius: "4px",
+            fontSize: "14px",
           }}
         />
 
         <button
           type="button"
           onClick={() => router.push("/submit")}
-          style={{
-            background: "#e50914",
-            color: "#fff",
-            border: "none",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-          }}
-        >
-          + Submit Film
-        </button>
+          style={topBarButtonPrimary}
+        >
+          + Submit Film
+        </button>
 
-        <button
-          type="button"
-          onClick={() => router.push("/signin")}
-          style={{
-            background: "#222",
-            color: "#fff",
-            border: "1px solid #444",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-          }}
-        >
-          Sign In
-        </button>
-
+        <button
+          type="button"
+          onClick={() => router.push("/signin")}
+          style={topBarButtonSecondary}
+        >
+          Sign In
+        </button>
 
         <button
           type="button"
           onClick={() => router.push("/support")}
-          style={{
-            background: "#222",
-            color: "#fff",
-            border: "1px solid #444",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-            marginLeft: "auto",
-          }}
+          style={{ ...topBarButtonSecondary, marginLeft: "auto" }}
         >
           Support
         </button>
@@ -256,15 +184,17 @@ export default function Page() {
           <div
             style={{
               position: "absolute",
-              top: "55px",
-              left: "10px",
-              background: "#111",
-              border: "1px solid #333",
+              top: "58px",
+              left: "24px",
+              background: "#181818",
+              border: "1px solid #2a2a2a",
+              borderRadius: "6px",
               padding: "10px",
               zIndex: 10000,
-              minWidth: "220px",
+              minWidth: "240px",
               maxHeight: "70vh",
               overflowY: "auto",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
             }}
           >
             {films.map((film) => (
@@ -279,26 +209,22 @@ export default function Page() {
                   display: "block",
                   width: "100%",
                   padding: "10px",
-                  background: "#222",
+                  background: "transparent",
                   color: "#fff",
-                  border: "1px solid #444",
-                  cursor: "pointer",
+                  border: "none",
                   borderRadius: "4px",
-                  marginBottom: "6px",
+                  cursor: "pointer",
                   textAlign: "left",
+                  fontSize: "14px",
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#2a2a2a")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 {film.title || "Untitled Film"}
               </button>
             ))}
-
             {films.length === 0 && (
-              <div
-                style={{
-                  color: "#999",
-                  padding: "10px",
-                }}
-              >
+              <div style={{ color: TEXT_MUTED, padding: "10px", fontSize: "14px" }}>
                 No films yet.
               </div>
             )}
@@ -311,14 +237,14 @@ export default function Page() {
         style={{
           width: "100%",
           maxHeight: "500px",
-          marginBottom: "8px",
-          background: "#000",
+          marginBottom: "24px",
+          background: BG,
           display: "flex",
           justifyContent: "center",
           overflow: "hidden",
         }}
       >
-        <div style={{ width: "100%", padding: "0 20px", boxSizing: "border-box" }}>
+        <div style={{ width: "100%", padding: "0 24px", boxSizing: "border-box" }}>
           <AVODPlayer
             autoPlay
             src={getBunnyStreamUrl(
@@ -335,7 +261,7 @@ export default function Page() {
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.95)",
+            background: "rgba(0,0,0,0.96)",
             zIndex: 20000,
             display: "flex",
             alignItems: "center",
@@ -362,12 +288,8 @@ export default function Page() {
           </button>
 
           <div
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: "90%",
-              maxWidth: "1100px",
-              background: "#000",
-            }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "90%", maxWidth: "1100px", background: "#000" }}
           >
             <AVODPlayer
               src={
@@ -376,54 +298,56 @@ export default function Page() {
                   : getBunnyStreamUrl(activeFilm.video_url)
               }
             />
+            <div style={{ padding: "16px 4px" }}>
+              <h2 style={{ fontSize: "22px", margin: "0 0 6px" }}>
+                {activeFilm.title || "Untitled Film"}
+              </h2>
+              <div style={{ fontSize: "14px", color: TEXT_SECONDARY }}>
+                {activeFilm.genre || "AI Film"}
+                {(activeFilm.release_year || activeFilm.year) &&
+                  ` • ${activeFilm.release_year || activeFilm.year}`}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* FILM GRID */}
-      <div style={{ padding: "20px" }}>
+      <div style={{ padding: "0 24px 40px" }}>
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "16px",
+            gap: "24px 16px",
           }}
         >
           {filteredFilms.map((film) => {
-            const url = film.video_url || "";
-            const youtubeVideo = isYouTubeUrl(url);
-            const previewUrl = youtubeVideo ? null : getBunnyPreviewUrl(url);
-            const isExpanded = expandedFilm === film.id;
             const isHovered = hovered === film.id;
-            const showDetails = isHovered || isExpanded;
 
             return (
               <div
                 key={film.id}
-                onClick={() => {
-                  if (isExpanded) {
-                    setActiveFilm(film);
-                  } else {
-                    setExpandedFilm(film.id);
-                  }
-                }}
                 onMouseEnter={() => setHovered(film.id)}
                 onMouseLeave={() => setHovered(null)}
+                onClick={() => setActiveFilm(film)}
                 style={{
                   position: "relative",
-                  transition: "all 0.25s ease",
-                  zIndex: showDetails ? 999 : 1,
                   cursor: "pointer",
+                  zIndex: isHovered ? 50 : 1,
                 }}
               >
                 <div
                   style={{
                     position: "relative",
-                    width: "100%",
-                    height: "150px",
-                    borderRadius: "6px",
+                    borderRadius: "4px",
                     overflow: "hidden",
                     background: "#222",
+                    aspectRatio: "16 / 9",
+                    transform: isHovered ? "scale(1.08)" : "scale(1)",
+                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                    boxShadow: isHovered
+                      ? "0 16px 32px rgba(0,0,0,0.7)"
+                      : "0 2px 6px rgba(0,0,0,0.3)",
                   }}
                 >
                   <FilmThumbnail
@@ -438,123 +362,66 @@ export default function Page() {
                     }}
                   />
 
-                  {showDetails && !youtubeVideo && previewUrl && (
-                    <video
-                      src={previewUrl}
-                      muted
-                      loop
-                      playsInline
-                      autoPlay
-                      controls={false}
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  )}
-                </div>
-
-                {showDetails && (
+                  {/* Bottom gradient, always visible for legibility */}
                   <div
                     style={{
-                      background: "#181818",
-                      padding: "12px",
-                      borderRadius: "0 0 8px 8px",
-                      boxShadow: "0 12px 28px rgba(0,0,0,0.7)",
                       position: "absolute",
-                      top: "150px",
                       left: 0,
                       right: 0,
-                      width: "100%",
-                      boxSizing: "border-box",
-                      zIndex: 999,
+                      bottom: 0,
+                      height: "55%",
+                      background:
+                        "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0))",
+                      pointerEvents: "none",
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      padding: "10px 12px",
                     }}
                   >
-                    <h3
+                    <div
                       style={{
-                        margin: "0 0 6px",
-                        fontSize: "18px",
-                        textAlign: "left",                        fontWeight: 700,
-                        lineHeight: 1.3,
+                        fontSize: "13px",
+                        fontWeight: 700,
                         color: "#fff",
+                        textAlign: "left",
+                        marginBottom: isHovered ? "4px" : 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
                       }}
                     >
                       {film.title || "Untitled Film"}
-                    </h3>
-
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        color: "#b5b5b5",
-                        textAlign: "left",                        marginBottom: "4px",
-                      }}
-                    >
-                      {film.creator || "Independent Creator"}
                     </div>
 
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        color: "#999",
-                        marginBottom: "8px",
-                        textAlign: "left",                      }}
-                    >
-                      {film.genre || "AI Film"}
-                      {(film.release_year || film.year) &&
-                        ` • ${film.release_year || film.year}`}
-                      {" • 👁 "}
-                      {film.views || 0}
-                    </div>
-
-                    {film.description && (
-                      <p
+                    {isHovered && (
+                      <div
                         style={{
-                          margin: 0,
-                          fontSize: "14px",
-                          lineHeight: 1.4,
-                          color: "#d8d8d8",
-                          display: "-webkit-box",
-                          textAlign: "left",                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
+                          fontSize: "11px",
+                          color: TEXT_SECONDARY,
+                          textAlign: "left",
                         }}
                       >
-                        {film.description}
-                      </p>
+                        {film.genre || "AI Film"}
+                        {(film.release_year || film.year) &&
+                          ` • ${film.release_year || film.year}`}
+                      </div>
                     )}
-
-                    <div
-  style={{
-    marginTop: "8px",
-    fontSize: "12px",
-    fontWeight: 700,
-    color: "#e50914",
-    textAlign: "left",
-  }}
->
-  Click again to play fullscreen
-</div>
-
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
         </div>
 
         {filteredFilms.length === 0 && (
-          <div
-            style={{
-              color: "#999",
-              marginTop: "10px",
-            }}
-          >
+          <div style={{ color: TEXT_MUTED, marginTop: "16px", fontSize: "14px" }}>
             No films found.
           </div>
         )}
@@ -562,3 +429,25 @@ export default function Page() {
     </div>
   );
 }
+
+const topBarButtonPrimary = {
+  background: ACCENT,
+  color: "#fff",
+  border: "none",
+  padding: "9px 14px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
+};
+
+const topBarButtonSecondary = {
+  background: "transparent",
+  color: "#fff",
+  border: "1px solid #444",
+  padding: "9px 14px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
+};
