@@ -462,7 +462,7 @@ export default function Page() {
                     <h3
                       style={{
                         margin: "0 0 6px",
-                        fontSize: "15px",
+                        fontSize: "18px",
                         fontWeight: 700,
                         lineHeight: 1.3,
                         color: "#fff",
@@ -473,7 +473,7 @@ export default function Page() {
 
                     <div
                       style={{
-                        fontSize: "12px",
+                        fontSize: "14px",
                         color: "#b5b5b5",
                         marginBottom: "4px",
                       }}
@@ -483,7 +483,7 @@ export default function Page() {
 
                     <div
                       style={{
-                        fontSize: "12px",
+                        fontSize: "14px",
                         color: "#999",
                         marginBottom: "8px",
                       }}
@@ -499,7 +499,7 @@ export default function Page() {
                       <p
                         style={{
                           margin: 0,
-                          fontSize: "12.5px",
+                          fontSize: "14px",
                           lineHeight: 1.4,
                           color: "#d8d8d8",
                           display: "-webkit-box",
@@ -515,7 +515,7 @@ export default function Page() {
                     <div
                       style={{
                         marginTop: "8px",
-                        fontSize: "11px",
+                        fontSize: "12px",
                         fontWeight: 700,
                         color: "#e50914",
                       }}
