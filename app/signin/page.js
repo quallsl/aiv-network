@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSupabase } from "../../lib/supabase";
 
 export default function SignInPage() {
-  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function SignInPage() {
 
     try {
       if (mode === "signup") {
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -32,16 +32,12 @@ export default function SignInPage() {
         });
 
         if (signUpError) throw signUpError;
-
-        // Supabase sends the confirmation email automatically when
-        // "Confirm email" is enabled in Authentication settings.
         setConfirmationSent(true);
       } else {
         const { error: signInError } =
           await supabase.auth.signInWithPassword({ email, password });
 
         if (signInError) throw signInError;
-
         router.push("/");
       }
     } catch (err) {
@@ -55,13 +51,10 @@ export default function SignInPage() {
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <h1 style={{ fontSize: "22px", marginBottom: "12px" }}>
-            Check your email
-          </h1>
-          <p style={{ color: "#ccc", lineHeight: 1.6 }}>
-            We sent a confirmation link to <strong>{email}</strong>. Click the
-            link to activate your filmmaker account, then come back and sign
-            in.
+          <h1 style={headingStyle}>Check your email</h1>
+          <p style={{ color: "#ccc", lineHeight: 1.6, textAlign: "center" }}>
+            We sent a confirmation link to <strong>{email}</strong>. Click
+            the link to activate your account, then come back and sign in.
           </p>
           <button
             type="button"
@@ -81,10 +74,10 @@ export default function SignInPage() {
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-        <h1 style={{ fontSize: "22px", marginBottom: "6px" }}>
-          {mode === "signup" ? "Create Filmmaker Account" : "Sign In"}
+        <h1 style={headingStyle}>
+          {mode === "signup" ? "Create Account" : "Sign In"}
         </h1>
-        <p style={{ color: "#999", marginBottom: "24px", fontSize: "13px" }}>
+        <p style={subheadStyle}>
           {mode === "signup"
             ? "Submit and manage your films on AIV Network."
             : "Welcome back to AIV Network."}
@@ -110,16 +103,12 @@ export default function SignInPage() {
             style={inputStyle}
           />
 
-          {error && (
-            <p style={{ color: "#ff6b6b", fontSize: "13px", marginTop: "8px" }}>
-              {error}
-            </p>
-          )}
+          {error && <p style={errorStyle}>{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            style={{ ...primaryButtonStyle, marginTop: "18px", width: "100%" }}
+            style={{ ...primaryButtonStyle, marginTop: "20px", width: "100%" }}
           >
             {loading
               ? "Please wait..."
@@ -129,7 +118,7 @@ export default function SignInPage() {
           </button>
         </form>
 
-        <p style={{ marginTop: "18px", fontSize: "13px", color: "#999" }}>
+        <p style={switchModeStyle}>
           {mode === "signup" ? (
             <>
               Already have an account?{" "}
@@ -163,11 +152,25 @@ const containerStyle = {
 
 const cardStyle = {
   width: "100%",
-  maxWidth: "380px",
+  maxWidth: "360px",
   background: "#151515",
   border: "1px solid #2a2a2a",
   borderRadius: "8px",
-  padding: "28px",
+  padding: "32px 28px",
+  boxSizing: "border-box",
+};
+
+const headingStyle = {
+  fontSize: "22px",
+  marginBottom: "8px",
+  textAlign: "center",
+};
+
+const subheadStyle = {
+  color: "#999",
+  marginBottom: "26px",
+  fontSize: "13px",
+  textAlign: "center",
 };
 
 const labelStyle = {
@@ -175,7 +178,7 @@ const labelStyle = {
   fontSize: "13px",
   color: "#ccc",
   marginBottom: "6px",
-  marginTop: "14px",
+  marginTop: "16px",
 };
 
 const inputStyle = {
@@ -198,6 +201,20 @@ const primaryButtonStyle = {
   fontWeight: "bold",
   borderRadius: "4px",
   fontSize: "14px",
+};
+
+const errorStyle = {
+  color: "#ff6b6b",
+  fontSize: "13px",
+  marginTop: "10px",
+  textAlign: "center",
+};
+
+const switchModeStyle = {
+  marginTop: "22px",
+  fontSize: "13px",
+  color: "#999",
+  textAlign: "center",
 };
 
 const linkStyle = {
