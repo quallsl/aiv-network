@@ -235,6 +235,25 @@ const inputStyle = {
   borderRadius: "4px",
   fontSize: "14px",
   boxSizing: "border-box",
+  transition: "border-color 0.15s ease",
+  outline: "none",
+};
+
+const hintStyle = {
+  fontSize: "12px",
+  color: "#808080",
+  marginTop: "6px",
+};
+
+const checkboxRowStyle = {
+  display: "flex",
+  gap: "8px",
+  alignItems: "flex-start",
+  marginTop: "18px",
+  fontSize: "12.5px",
+  color: "#b3b3b3",
+  lineHeight: 1.5,
+  cursor: "pointer",
 };
 
 const primaryButtonStyle = {
