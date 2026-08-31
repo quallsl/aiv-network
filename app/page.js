@@ -213,10 +213,27 @@ export default function Page() {
             cursor: "pointer",
             fontWeight: "bold",
             borderRadius: "4px",
-          }}
-        >
-          + Submit Film
-        </button>
+          }}
+        >
+          + Submit Film
+        </button>
+
+        <button
+          type="button"
+          onClick={() => router.push("/signin")}
+          style={{
+            background: "#222",
+            color: "#fff",
+            border: "1px solid #444",
+            padding: "8px 12px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            borderRadius: "4px",
+          }}
+        >
+          Sign In
+        </button>
+
 
         <button
           type="button"
@@ -301,7 +318,7 @@ export default function Page() {
           overflow: "hidden",
         }}
       >
-        <div style={{ width: "100%", maxWidth: "1200px" }}>
+        <div style={{ width: "100%", padding: "0 20px", boxSizing: "border-box" }}>
           <AVODPlayer
             autoPlay
             src={getBunnyStreamUrl(
@@ -463,7 +480,7 @@ export default function Page() {
                       style={{
                         margin: "0 0 6px",
                         fontSize: "18px",
-                        fontWeight: 700,
+                        textAlign: "left",                        fontWeight: 700,
                         lineHeight: 1.3,
                         color: "#fff",
                       }}
@@ -475,7 +492,7 @@ export default function Page() {
                       style={{
                         fontSize: "14px",
                         color: "#b5b5b5",
-                        marginBottom: "4px",
+                        textAlign: "left",                        marginBottom: "4px",
                       }}
                     >
                       {film.creator || "Independent Creator"}
@@ -486,7 +503,7 @@ export default function Page() {
                         fontSize: "14px",
                         color: "#999",
                         marginBottom: "8px",
-                      }}
+                        textAlign: "left",                      }}
                     >
                       {film.genre || "AI Film"}
                       {(film.release_year || film.year) &&
@@ -503,7 +520,7 @@ export default function Page() {
                           lineHeight: 1.4,
                           color: "#d8d8d8",
                           display: "-webkit-box",
-                          WebkitLineClamp: 3,
+                          textAlign: "left",                          WebkitLineClamp: 3,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                         }}
@@ -513,15 +530,17 @@ export default function Page() {
                     )}
 
                     <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        color: "#e50914",
-                      }}
-                    >
-                      Click again to play fullscreen
-                    </div>
+  style={{
+    marginTop: "8px",
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#e50914",
+    textAlign: "left",
+  }}
+>
+  Click again to play fullscreen
+</div>
+
                   </div>
                 )}
               </div>
