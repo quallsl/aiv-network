@@ -1,545 +1,211 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import AVODPlayer from "./AVODPlayer";
-import { getSupabase } from "../lib/supabase";
+import { getSupabase } from "../../lib/supabase";
 
-const BUNNY_CDN_HOSTNAME = "vz-b7971a5e-657.b-cdn.net";
-const FALLBACK_THUMBNAIL = "/no-preview.png";
-
-function parseBunnyUrl(url) {
-  if (!url) return null;
-
-  const match = url.match(
-    /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
-  );
-
-  if (!match) return null;
-
-  const [, libraryId, videoId] = match;
-  return { libraryId, videoId };
-}
-
-function getBunnyStreamUrl(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return url;
-
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/playlist.m3u8`;
-}
-
-function getBunnyPreviewUrl(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return url;
-
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/play_480p.mp4`;
-}
-
-function getBunnyThumbnail(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return null;
-
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/thumbnail.jpg`;
-}
-
-function getYouTubeId(url) {
-  if (!url) return null;
-
-  const regex =
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
-
-  const match = url.match(regex);
-  return match ? match[1] : null;
-}
-
-function getYouTubeThumbnail(url) {
-  const videoId = getYouTubeId(url);
-
-  return videoId
-    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-    : null;
-}
-
-function isYouTubeUrl(url) {
-  return Boolean(url?.includes("youtube.com") || url?.includes("youtu.be"));
-}
-
-// Builds an ordered list of candidate thumbnail URLs for a film and
-// tries each one in turn, falling through to the next on load failure.
-// This handles cases where one source (stored URL, computed Bunny path,
-// etc.) is broken for a given film but another source works fine —
-// picking a single "best guess" ahead of time can't account for that.
-function FilmThumbnail({ film, alt, style }) {
-  const url = film?.video_url || "";
-
-  const candidates = [
-    film?.thumbnail_url,
-    getYouTubeThumbnail(url),
-    getBunnyThumbnail(url),
-    FALLBACK_THUMBNAIL,
-  ].filter(Boolean);
-
-  const [index, setIndex] = useState(0);
-
-  const currentSrc = candidates[index] || FALLBACK_THUMBNAIL;
-
-  function handleError() {
-    setIndex((prev) => (prev + 1 < candidates.length ? prev + 1 : prev));
-  }
-
-  return (
-    <img
-      src={currentSrc}
-      alt={alt}
-      onError={handleError}
-      style={style}
-    />
-  );
-}
-
-export default function Page() {
-  const [showMenu, setShowMenu] = useState(false);
-  const [films, setFilms] = useState([]);
-  const [hovered, setHovered] = useState(null);
-  const [activeFilm, setActiveFilm] = useState(null);
-  const [expandedFilm, setExpandedFilm] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory] = useState("All");
+export default function SignInPage() {
+  const [mode, setMode] = useState("signin"); // "signin" | "signup"
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const router = useRouter();
 
-  useEffect(() => {
-    loadFilms();
-  }, []);
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
 
-  async function loadFilms() {
+    const supabase = getSupabase();
+
     try {
-      const supabase = getSupabase();
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+          },
+        });
 
-      const { data, error } = await supabase
-        .from("films")
-        .select("*")
-        .order("id", { ascending: false });
+        if (signUpError) throw signUpError;
 
-      if (error) {
-        console.error("Supabase load error:", error);
-        return;
+        // Supabase sends the confirmation email automatically when
+        // "Confirm email" is enabled in Authentication settings.
+        setConfirmationSent(true);
+      } else {
+        const { error: signInError } =
+          await supabase.auth.signInWithPassword({ email, password });
+
+        if (signInError) throw signInError;
+
+        router.push("/");
       }
-
-      setFilms(data || []);
-    } catch (error) {
-      console.error("Load films error:", error);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  const filteredFilms = films.filter((film) => {
-    const query = searchTerm.trim().toLowerCase();
-
-    const matchesSearch =
-      !query ||
-      film.title?.toLowerCase().includes(query) ||
-      film.creator?.toLowerCase().includes(query) ||
-      film.genre?.toLowerCase().includes(query) ||
-      film.description?.toLowerCase().includes(query);
-
-    const matchesCategory =
-      selectedCategory === "All" ||
-      film.genre?.toLowerCase() === selectedCategory.toLowerCase();
-
-    return matchesSearch && matchesCategory;
-  });
-
-  return (
-    <div
-      style={{
-        background: "#000",
-        color: "#fff",
-        minHeight: "100vh",
-      }}
-    >
-      {/* TOP BAR */}
-      <div
-        style={{
-          display: "flex",
-          gap: "6px",
-          padding: "10px",
-          alignItems: "center",
-          background: "#111",
-          position: "sticky",
-          top: 0,
-          zIndex: 9999,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setShowMenu((current) => !current)}
-          style={{
-            background: "#e50914",
-            color: "#fff",
-            border: "none",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-          }}
-        >
-          ☰ Menu
-        </button>
-
-        <input
-          aria-label="Search films"
-          placeholder="Search films..."
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          style={{
-            padding: "8px",
-            width: "230px",
-            maxWidth: "42vw",
-            background: "#222",
-            color: "#fff",
-            border: "1px solid #444",
-            borderRadius: "4px",
-          }}
-        />
-
-        <button
-          type="button"
-          onClick={() => router.push("/submit")}
-          style={{
-            background: "#e50914",
-            color: "#fff",
-            border: "none",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-          }}
-        >
-          + Submit Film
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push("/support")}
-          style={{
-            background: "#222",
-            color: "#fff",
-            border: "1px solid #444",
-            padding: "8px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-            borderRadius: "4px",
-            marginLeft: "auto",
-          }}
-        >
-          Support
-        </button>
-
-        {showMenu && (
-          <div
-            style={{
-              position: "absolute",
-              top: "55px",
-              left: "10px",
-              background: "#111",
-              border: "1px solid #333",
-              padding: "10px",
-              zIndex: 10000,
-              minWidth: "220px",
-              maxHeight: "70vh",
-              overflowY: "auto",
-            }}
-          >
-            {films.map((film) => (
-              <button
-                key={film.id}
-                type="button"
-                onClick={() => {
-                  setActiveFilm(film);
-                  setShowMenu(false);
-                }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "10px",
-                  background: "#222",
-                  color: "#fff",
-                  border: "1px solid #444",
-                  cursor: "pointer",
-                  borderRadius: "4px",
-                  marginBottom: "6px",
-                  textAlign: "left",
-                }}
-              >
-                {film.title || "Untitled Film"}
-              </button>
-            ))}
-
-            {films.length === 0 && (
-              <div
-                style={{
-                  color: "#999",
-                  padding: "10px",
-                }}
-              >
-                No films yet.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* HERO */}
-      <div
-        style={{
-          width: "100%",
-          maxHeight: "500px",
-          marginBottom: "8px",
-          background: "#000",
-          display: "flex",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ width: "100%", maxWidth: "1200px" }}>
-          <AVODPlayer
-            autoPlay
-            src={getBunnyStreamUrl(
-              "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
-            )}
-          />
-        </div>
-      </div>
-
-      {/* FULLSCREEN PLAYER */}
-      {activeFilm && (
-        <div
-          onClick={() => setActiveFilm(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.95)",
-            zIndex: 20000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+  if (confirmationSent) {
+    return (
+      <div style={containerStyle}>
+        <div style={cardStyle}>
+          <h1 style={{ fontSize: "22px", marginBottom: "12px" }}>
+            Check your email
+          </h1>
+          <p style={{ color: "#ccc", lineHeight: 1.6 }}>
+            We sent a confirmation link to <strong>{email}</strong>. Click the
+            link to activate your filmmaker account, then come back and sign
+            in.
+          </p>
           <button
             type="button"
-            aria-label="Close player"
-            onClick={() => setActiveFilm(null)}
-            style={{
-              position: "absolute",
-              top: "20px",
-              right: "25px",
-              fontSize: "28px",
-              background: "none",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              zIndex: 20001,
+            onClick={() => {
+              setConfirmationSent(false);
+              setMode("signin");
             }}
+            style={{ ...primaryButtonStyle, marginTop: "20px" }}
           >
-            ✕
+            Back to Sign In
           </button>
-
-          <div
-            onClick={(event) => event.stopPropagation()}
-            style={{
-              width: "90%",
-              maxWidth: "1100px",
-              background: "#000",
-            }}
-          >
-            <AVODPlayer
-              src={
-                isYouTubeUrl(activeFilm.video_url)
-                  ? activeFilm.video_url
-                  : getBunnyStreamUrl(activeFilm.video_url)
-              }
-            />
-          </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* FILM GRID */}
-      <div style={{ padding: "20px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "16px",
-          }}
-        >
-          {filteredFilms.map((film) => {
-            const url = film.video_url || "";
-            const youtubeVideo = isYouTubeUrl(url);
-            const previewUrl = youtubeVideo ? null : getBunnyPreviewUrl(url);
-            const isExpanded = expandedFilm === film.id;
-            const isHovered = hovered === film.id;
-            const showDetails = isHovered || isExpanded;
+  return (
+    <div style={containerStyle}>
+      <div style={cardStyle}>
+        <h1 style={{ fontSize: "22px", marginBottom: "6px" }}>
+          {mode === "signup" ? "Create Filmmaker Account" : "Sign In"}
+        </h1>
+        <p style={{ color: "#999", marginBottom: "24px", fontSize: "13px" }}>
+          {mode === "signup"
+            ? "Submit and manage your films on AIV Network."
+            : "Welcome back to AIV Network."}
+        </p>
 
-            return (
-              <div
-                key={film.id}
-                onClick={() => {
-                  if (isExpanded) {
-                    setActiveFilm(film);
-                  } else {
-                    setExpandedFilm(film.id);
-                  }
-                }}
-                onMouseEnter={() => setHovered(film.id)}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  position: "relative",
-                  transition: "all 0.25s ease",
-                  zIndex: showDetails ? 999 : 1,
-                  cursor: "pointer",
-                }}
-              >
-                <div
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "150px",
-                    borderRadius: "6px",
-                    overflow: "hidden",
-                    background: "#222",
-                  }}
-                >
-                  <FilmThumbnail
-                    film={film}
-                    alt={film.title || "Film"}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
+        <form onSubmit={handleSubmit}>
+          <label style={labelStyle}>Email</label>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={inputStyle}
+          />
 
-                  {showDetails && !youtubeVideo && previewUrl && (
-                    <video
-                      src={previewUrl}
-                      muted
-                      loop
-                      playsInline
-                      autoPlay
-                      controls={false}
-                      onError={(event) => {
-                        event.currentTarget.style.display = "none";
-                      }}
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                  )}
-                </div>
+          <label style={labelStyle}>Password</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={inputStyle}
+          />
 
-                {showDetails && (
-                  <div
-                    style={{
-                      background: "#181818",
-                      padding: "12px",
-                      borderRadius: "0 0 8px 8px",
-                      boxShadow: "0 12px 28px rgba(0,0,0,0.7)",
-                      position: "absolute",
-                      top: "150px",
-                      left: 0,
-                      right: 0,
-                      width: "100%",
-                      boxSizing: "border-box",
-                      zIndex: 999,
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 6px",
-                        fontSize: "15px",
-                        fontWeight: 700,
-                        lineHeight: 1.3,
-                        color: "#fff",
-                      }}
-                    >
-                      {film.title || "Untitled Film"}
-                    </h3>
+          {error && (
+            <p style={{ color: "#ff6b6b", fontSize: "13px", marginTop: "8px" }}>
+              {error}
+            </p>
+          )}
 
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#b5b5b5",
-                        marginBottom: "4px",
-                      }}
-                    >
-                      {film.creator || "Independent Creator"}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "#999",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      {film.genre || "AI Film"}
-                      {(film.release_year || film.year) &&
-                        ` • ${film.release_year || film.year}`}
-                      {" • 👁 "}
-                      {film.views || 0}
-                    </div>
-
-                    {film.description && (
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "12.5px",
-                          lineHeight: 1.4,
-                          color: "#d8d8d8",
-                          display: "-webkit-box",
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {film.description}
-                      </p>
-                    )}
-
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        color: "#e50914",
-                      }}
-                    >
-                      Click again to play fullscreen
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {filteredFilms.length === 0 && (
-          <div
-            style={{
-              color: "#999",
-              marginTop: "10px",
-            }}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{ ...primaryButtonStyle, marginTop: "18px", width: "100%" }}
           >
-            No films found.
-          </div>
-        )}
+            {loading
+              ? "Please wait..."
+              : mode === "signup"
+              ? "Create Account"
+              : "Sign In"}
+          </button>
+        </form>
+
+        <p style={{ marginTop: "18px", fontSize: "13px", color: "#999" }}>
+          {mode === "signup" ? (
+            <>
+              Already have an account?{" "}
+              <button type="button" onClick={() => setMode("signin")} style={linkStyle}>
+                Sign In
+              </button>
+            </>
+          ) : (
+            <>
+              New filmmaker?{" "}
+              <button type="button" onClick={() => setMode("signup")} style={linkStyle}>
+                Create an account
+              </button>
+            </>
+          )}
+        </p>
       </div>
     </div>
   );
 }
+
+const containerStyle = {
+  minHeight: "100vh",
+  background: "#000",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "20px",
+};
+
+const cardStyle = {
+  width: "100%",
+  maxWidth: "380px",
+  background: "#151515",
+  border: "1px solid #2a2a2a",
+  borderRadius: "8px",
+  padding: "28px",
+};
+
+const labelStyle = {
+  display: "block",
+  fontSize: "13px",
+  color: "#ccc",
+  marginBottom: "6px",
+  marginTop: "14px",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "10px",
+  background: "#222",
+  color: "#fff",
+  border: "1px solid #444",
+  borderRadius: "4px",
+  fontSize: "14px",
+  boxSizing: "border-box",
+};
+
+const primaryButtonStyle = {
+  background: "#e50914",
+  color: "#fff",
+  border: "none",
+  padding: "10px 16px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
+};
+
+const linkStyle = {
+  background: "none",
+  border: "none",
+  color: "#e50914",
+  fontWeight: 600,
+  cursor: "pointer",
+  padding: 0,
+  fontSize: "13px",
+};
