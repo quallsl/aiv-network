@@ -6,8 +6,7 @@ import AVODPlayer from "./AVODPlayer";
 import { getSupabase } from "../lib/supabase";
 
 const BUNNY_CDN_HOSTNAME = "vz-b7971a5e-657.b-cdn.net";
-const FALLBACK_THUMBNAIL =
-  "https://via.placeholder.com/320x180?text=No+Preview";
+const FALLBACK_THUMBNAIL = "/no-preview.png";
 
 function parseBunnyUrl(url) {
   if (!url) return null;
@@ -65,6 +64,39 @@ function isYouTubeUrl(url) {
   return Boolean(url?.includes("youtube.com") || url?.includes("youtu.be"));
 }
 
+// Builds an ordered list of candidate thumbnail URLs for a film and
+// tries each one in turn, falling through to the next on load failure.
+// This handles cases where one source (stored URL, computed Bunny path,
+// etc.) is broken for a given film but another source works fine —
+// picking a single "best guess" ahead of time can't account for that.
+function FilmThumbnail({ film, alt, style }) {
+  const url = film?.video_url || "";
+
+  const candidates = [
+    film?.thumbnail_url,
+    getYouTubeThumbnail(url),
+    getBunnyThumbnail(url),
+    FALLBACK_THUMBNAIL,
+  ].filter(Boolean);
+
+  const [index, setIndex] = useState(0);
+
+  const currentSrc = candidates[index] || FALLBACK_THUMBNAIL;
+
+  function handleError() {
+    setIndex((prev) => (prev + 1 < candidates.length ? prev + 1 : prev));
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      onError={handleError}
+      style={style}
+    />
+  );
+}
+
 export default function Page() {
   const [showMenu, setShowMenu] = useState(false);
   const [films, setFilms] = useState([]);
@@ -99,17 +131,6 @@ export default function Page() {
       console.error("Load films error:", error);
     }
   }
-
-  function getThumbnail(film) {
-  const url = film?.video_url || "";
-
-  return (
-    getYouTubeThumbnail(url) ||
-    getBunnyThumbnail(url) ||
-    film?.thumbnail_url ||
-    FALLBACK_THUMBNAIL
-  );
-}
 
   const filteredFilms = films.filter((film) => {
     const query = searchTerm.trim().toLowerCase();
@@ -351,10 +372,9 @@ export default function Page() {
             gap: "16px",
           }}
         >
-          {filteredFilms.slice(0, 24).map((film) => {
+          {filteredFilms.map((film) => {
             const url = film.video_url || "";
             const youtubeVideo = isYouTubeUrl(url);
-            const thumbnail = getThumbnail(film);
             const previewUrl = youtubeVideo ? null : getBunnyPreviewUrl(url);
             const isExpanded = expandedFilm === film.id;
             const isHovered = hovered === film.id;
@@ -389,12 +409,9 @@ export default function Page() {
                     background: "#222",
                   }}
                 >
-                  <img
-                    src={thumbnail}
+                  <FilmThumbnail
+                    film={film}
                     alt={film.title || "Film"}
-                    onError={(event) => {
-                      event.currentTarget.src = FALLBACK_THUMBNAIL;
-                    }}
                     style={{
                       position: "absolute",
                       inset: 0,
