@@ -101,15 +101,15 @@ export default function Page() {
   }
 
   function getThumbnail(film) {
-    const url = film?.video_url || "";
+  const url = film?.video_url || "";
 
-    return (
-      film?.thumbnail_url ||
-      getYouTubeThumbnail(url) ||
-      getBunnyThumbnail(url) ||
-      FALLBACK_THUMBNAIL
-    );
-  }
+  return (
+    getYouTubeThumbnail(url) ||
+    getBunnyThumbnail(url) ||
+    film?.thumbnail_url ||
+    FALLBACK_THUMBNAIL
+  );
+}
 
   const filteredFilms = films.filter((film) => {
     const query = searchTerm.trim().toLowerCase();
