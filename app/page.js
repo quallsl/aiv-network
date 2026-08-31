@@ -7,7 +7,7 @@ import { getSupabase } from "../lib/supabase";
 
 const BUNNY_CDN_HOSTNAME = "vz-b7971a5e-657.b-cdn.net";
 const FALLBACK_THUMBNAIL = "/no-preview.png";
-const BG = "#141414";
+const BG = "#000";
 const CARD_BG = "#181818";
 const ACCENT = "#e50914";
 const TEXT_SECONDARY = "#b3b3b3";
@@ -124,11 +124,10 @@ export default function Page() {
           gap: "10px",
           padding: "14px 24px",
           alignItems: "center",
-          background: "rgba(20,20,20,0.95)",
+          background: "rgba(0,0,0,0.95)",
           position: "sticky",
           top: 0,
           zIndex: 9999,
-          borderBottom: "1px solid #2a2a2a",
         }}
       >
         <button
@@ -313,7 +312,7 @@ export default function Page() {
       )}
 
       {/* FILM GRID */}
-      <div style={{ padding: "0 24px 40px" }}>
+      <div style={{ padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
         <div
           style={{
             display: "grid",

@@ -12,6 +12,8 @@ export default function SignInPage() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmationSent, setConfirmationSent] = useState(false);
@@ -21,6 +23,12 @@ export default function SignInPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+
+    if (mode === "signup" && !agreedToTerms) {
+      setError("Please agree to the Filmmaker Submission Agreement to continue.");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = getSupabase();
@@ -73,9 +81,9 @@ export default function SignInPage() {
 
   return (
     <div style={containerStyle}>
-      <div style={cardStyle}>
+      <div style={{ ...cardStyle, maxWidth: mode === "signup" ? "400px" : "360px" }}>
         <h1 style={headingStyle}>
-          {mode === "signup" ? "Create Account" : "Sign In"}
+          {mode === "signup" ? "Create Your Account" : "Sign In"}
         </h1>
         <p style={subheadStyle}>
           {mode === "signup"
@@ -90,7 +98,12 @@ export default function SignInPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            style={inputStyle}
+            onFocus={() => setFocusedField("email")}
+            onBlur={() => setFocusedField(null)}
+            style={{
+              ...inputStyle,
+              borderColor: focusedField === "email" ? ACCENT : "#444",
+            }}
           />
 
           <label style={labelStyle}>Password</label>
@@ -100,15 +113,50 @@ export default function SignInPage() {
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={inputStyle}
+            onFocus={() => setFocusedField("password")}
+            onBlur={() => setFocusedField(null)}
+            style={{
+              ...inputStyle,
+              borderColor: focusedField === "password" ? ACCENT : "#444",
+            }}
           />
+          {mode === "signup" && (
+            <p style={hintStyle}>Must be at least 6 characters.</p>
+          )}
+
+          {mode === "signup" && (
+            <label style={checkboxRowStyle}>
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                style={{ marginTop: "2px", accentColor: ACCENT, flexShrink: 0 }}
+              />
+              <span>
+                I agree to the{" "}
+                <a href="/terms" style={linkStyle}>
+                  Filmmaker Submission Agreement
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" style={linkStyle}>
+                  Privacy Policy
+                </a>
+                .
+              </span>
+            </label>
+          )}
 
           {error && <p style={errorStyle}>{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            style={{ ...primaryButtonStyle, marginTop: "22px", width: "100%" }}
+            style={{
+              ...primaryButtonStyle,
+              marginTop: "22px",
+              width: "100%",
+              opacity: loading ? 0.7 : 1,
+            }}
           >
             {loading ? "Please wait..." : mode === "signup" ? "Create Account" : "Sign In"}
           </button>
