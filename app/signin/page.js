@@ -38,7 +38,13 @@ export default function SignInPage() {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              agreed_to_terms: true,
+              agreed_to_terms_at: new Date().toISOString(),
+            },
+          },
         });
         if (signUpError) throw signUpError;
         setConfirmationSent(true);
@@ -134,14 +140,9 @@ export default function SignInPage() {
               />
               <span>
                 I agree to the{" "}
-                <a href="/terms" style={linkStyle}>
-                  Filmmaker Submission Agreement
-                </a>{" "}
+                <a href="/terms" style={inlineLinkStyle}>Filmmaker Submission Agreement</a>{" "}
                 and{" "}
-                <a href="/privacy" style={linkStyle}>
-                  Privacy Policy
-                </a>
-                .
+                <a href="/privacy" style={inlineLinkStyle}>Privacy Policy</a>.
               </span>
             </label>
           )}
@@ -289,4 +290,10 @@ const linkStyle = {
   cursor: "pointer",
   padding: 0,
   fontSize: "13px",
+};
+
+const inlineLinkStyle = {
+  color: ACCENT,
+  fontWeight: 600,
+  textDecoration: "none",
 };
