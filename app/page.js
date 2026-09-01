@@ -320,7 +320,7 @@ export default function Page() {
             gap: "24px 16px",
           }}
         >
-          {filteredFilms.map((film, filmIndex) => {
+          {filteredFilms.map((film) => {
             const isHovered = hovered === film.id;
 
             return (
@@ -333,12 +333,9 @@ export default function Page() {
                   position: "relative",
                   cursor: "pointer",
                   zIndex: isHovered ? 50 : 1,
-                  border: "2px solid lime",               
-                 }}
+          }}
               >
-                <div style={{ position: "absolute", top: 0, left: 0, background: "red", color: "white", fontSize: "11px", padding: "2px 6px", zIndex: 999 }}>
-                  #{filmIndex} / {film?.id || "NO-ID"} / {film?.title || "NO-TITLE"}
-                </div>                <div
+                <div 
                   style={{
                     position: "relative",
                     borderRadius: "4px",
