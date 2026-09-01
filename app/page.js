@@ -333,7 +333,8 @@ export default function Page() {
                   position: "relative",
                   cursor: "pointer",
                   zIndex: isHovered ? 50 : 1,
-                }}
+                  border: "2px solid lime",               
+                 }}
               >
                 <div
                   style={{
