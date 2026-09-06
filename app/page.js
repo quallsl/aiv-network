@@ -243,7 +243,7 @@ export default function Page() {
           overflow: "hidden",
         }}
       >
-        <div style={{ width: "100%", padding: "0 24px", boxSizing: "border-box" }}>
+        <div style={{ width: "100%", maxWidth: "1600px", margin: "0 auto", padding: "0 24px", boxSizing: "border-box" }}>
           <AVODPlayer
             autoPlay
             src={getBunnyStreamUrl(
@@ -312,7 +312,7 @@ export default function Page() {
       )}
 
       {/* FILM GRID */}
-      <div style={{ padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
+      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
         <div
           style={{
             display: "grid",
