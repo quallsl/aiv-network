@@ -243,7 +243,7 @@ export default function Page() {
           overflow: "hidden",
         }}
       >
-        <div style={{ width: "100%", maxWidth: "1600px", margin: "0 auto", padding: "0 24px", boxSizing: "border-box" }}>
+        <div style={{ width: "100%" }}>
           <AVODPlayer
             autoPlay
             src={getBunnyStreamUrl(
