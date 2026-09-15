@@ -246,7 +246,8 @@ export default function Page() {
         <div style={{ width: "100%" }}>
           <AVODPlayer
             autoPlay
-            src={getBunnyStreamUrl(
+            vastTag="/ads/karmicleaf-vast.xml"            
+            src={getBunnyStreamUrl(
               "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
             )}
           />

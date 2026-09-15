@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VAST version="3.0">
+  <Ad id="karmicleaf-001">
+    <InLine>
+      <AdSystem>AIV Network</AdSystem>
+      <AdTitle>theKarmicLeaf Pre-Roll</AdTitle>
+      <Impression><![CDATA[https://aivnetwork.online/api/track?ad=karmicleaf&event=impression]]></Impression>
+      <Creatives>
+        <Creative>
+          <Linear>
+            <Duration>00:00:15</Duration>
+            <TrackingEvents>
+              <Tracking event="start"><![CDATA[https://aivnetwork.online/api/track?ad=karmicleaf&event=start]]></Tracking>
+              <Tracking event="complete"><![CDATA[https://aivnetwork.online/api/track?ad=karmicleaf&event=complete]]></Tracking>
+              <Tracking event="skip"><![CDATA[https://aivnetwork.online/api/track?ad=karmicleaf&event=skip]]></Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough><![CDATA[https://thekarmicleaf.wixsite.com/thekarmicleaf]]></ClickThrough>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4" width="640" height="360" bitrate="1000">
+                <![CDATA[https://vz-b7971a5e-657.b-cdn.net/6a78da90-1427-4d4b-b506-5d422f2c5b03/play_360p.mp4]]>
+              </MediaFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>
