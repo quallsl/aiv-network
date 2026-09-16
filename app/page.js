@@ -235,7 +235,7 @@ export default function Page() {
       <div
         style={{
           width: "100%",
-          height: "500px",
+          height: "550px",
           marginBottom: "24px",
           background: BG,
           display: "flex",
