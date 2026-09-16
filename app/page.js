@@ -232,19 +232,19 @@ export default function Page() {
       </div>
 
       {/* HERO */}
-      <div
-        style={{
-          width: "100%",
-          maxHeight: "500px",
-          marginBottom: "24px",
-          background: BG,
-          display: "flex",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ width: "100%" }}>
-          <AVODPlayer
+      <div
+        style={{
+          width: "100%",
+          height: "500px",
+          marginBottom: "24px",
+          background: BG,
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ width: "100%", height: "100%" }}>
+          <AVODPlayer
             autoPlay
             vastTag="https://aivnetwork.online/ads/karmicleaf-vast.xml"            
             src={getBunnyStreamUrl(
