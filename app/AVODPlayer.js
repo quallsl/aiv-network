@@ -330,16 +330,14 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     }
   }
 
- function handleToggleAdMute(event) {
+  function handleToggleAdMute(event) {
     event.stopPropagation();
     event.preventDefault();
-    if (videoRef.current) {
-      const nextMuted = !videoRef.current.muted;
-      videoRef.current.muted = nextMuted;
-      if (!nextMuted) {
-        videoRef.current.volume = 1;
-      }
-      setAdMuted(nextMuted);
+    if (adsManagerRef.current) {
+      const currentVolume = adsManagerRef.current.getVolume();
+      const nextVolume = currentVolume > 0 ? 0 : 1;
+      adsManagerRef.current.setVolume(nextVolume);
+      setAdMuted(nextVolume === 0);
     }
   }
 
