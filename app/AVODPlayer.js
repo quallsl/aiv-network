@@ -241,7 +241,8 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
               window.google.ima.AdEvent.Type.CONTENT_PAUSE_REQUESTED,
               () => {
                 video.pause();
-                video.controls = false;
+                video.muted = false;
+                video.volume = 1;
                 setAdPlaying(true);
                 startSkipCountdown();
               }
@@ -350,7 +351,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
       <video
         ref={videoRef}
         src={isHLS ? undefined : playerSrc}
-        controls={!adPlaying}
+        controls
         playsInline
         preload="metadata"
         style={styles.player}
