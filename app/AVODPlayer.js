@@ -86,7 +86,7 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
   const [adPlaying, setAdPlaying] = useState(false);
   const [skipCountdown, setSkipCountdown] = useState(SKIP_AFTER_SECONDS);
   const [skipReady, setSkipReady] = useState(false);
-
+  const [adMuted, setAdMuted] = useState(false);
   const cleanSrc = src || "";
 
   const isYouTube =
@@ -330,6 +330,19 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
     }
   }
 
+ function handleToggleAdMute(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    if (videoRef.current) {
+      const nextMuted = !videoRef.current.muted;
+      videoRef.current.muted = nextMuted;
+      if (!nextMuted) {
+        videoRef.current.volume = 1;
+      }
+      setAdMuted(nextMuted);
+    }
+  }
+
   if (!cleanSrc) {
     return <div style={styles.empty}>No video source</div>;
   }
@@ -381,6 +394,13 @@ export default function AVODPlayer({ src, vastTag, autoPlay = false }) {
           >
             {skipReady ? "Skip Ad ▶" : `Skip in ${skipCountdown}s`}
           </button>
+  
+          <button
+            onClick={handleToggleAdMute}
+            style={styles.muteButton}
+          >
+            {adMuted ? "🔇" : "🔊"}
+          </button>
         </>
       )}
     </div>
@@ -435,6 +455,23 @@ const styles = {
     gap: 6,
     zIndex: 10,
   },
+muteButton: {
+    position: "absolute",
+    bottom: 14,
+    left: 14,
+    color: "#fff",
+    background: "rgba(0,0,0,0.7)",
+    border: "1px solid rgba(255,255,255,0.4)",
+    borderRadius: "50%",
+    width: 36,
+    height: 36,
+    fontSize: 16,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    zIndex: 10,
+  },
   empty: {
     width: "100%",
     height: "100%",
