@@ -9,7 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.106.1",
+    "@anthropic-ai/sdk": "^0.126.0",
+    "@supabase/supabase-js": "^2.116.0",
     "cloudinary": "^2.8.0",
     "hls.js": "^1.6.16",
     "next": "16.0.10",
