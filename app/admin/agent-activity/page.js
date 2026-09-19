@@ -1,9 +1,4 @@
-cat > app/admin/agent-activity/page.js << 'EOF'
 import { createClient } from '@supabase/supabase-js';
-
-// TODO: wrap this route in your existing admin-only auth check —
-// same gate you use for the rest of the admin area. This file only
-// handles the data + layout, not the guard.
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false }
@@ -112,4 +107,3 @@ export default async function AgentActivityPage() {
     </div>
   );
 }
-EOF

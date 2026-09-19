@@ -1,4 +1,3 @@
-cat > app/admin/login/page.js << 'EOF'
 'use client';
 
 import { useState, useRef } from 'react';
@@ -90,4 +89,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-EOF

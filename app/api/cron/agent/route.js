@@ -1,4 +1,3 @@
-cat > app/api/cron/agent/route.js << 'EOF'
 import { NextResponse } from 'next/server';
 import { reviewSubmissions } from '../../../../agent/tasks/reviewSubmissions.js';
 import { thumbnailAudit } from '../../../../agent/tasks/thumbnailAudit.js';
@@ -25,4 +24,4 @@ export async function GET(request) {
 
   return NextResponse.json({ review, thumbs, expirations });
 }
-EOF
+
