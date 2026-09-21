@@ -13,6 +13,8 @@ const ACCENT = "#e50914";
 const TEXT_SECONDARY = "#b3b3b3";
 const TEXT_MUTED = "#808080";
 
+const GENRES = ["AIV Originals", "Classic Horror", "Sci-Fi", "Horror", "Comedy"];
+
 function parseBunnyUrl(url) {
   if (!url) return null;
   const match = url.match(
@@ -73,12 +75,43 @@ function FilmThumbnail({ film, alt, style }) {
   return <img src={currentSrc} alt={alt} onError={handleError} style={style} />;
 }
 
+function GenreFilterBar({ activeGenre, onSelect }) {
+  return (
+    <div style={{ display: "flex", gap: "12px", padding: "0 24px 24px", flexWrap: "wrap" }}>
+      {GENRES.map((genre) => {
+        const isActive = activeGenre === genre;
+        return (
+          <button
+            key={genre}
+            type="button"
+            onClick={() => onSelect(isActive ? null : genre)}
+            style={{
+              padding: "8px 20px",
+              borderRadius: "999px",
+              border: isActive ? `1px solid ${ACCENT}` : "1px solid #333",
+              background: isActive ? ACCENT : "#111",
+              color: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {genre}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Page() {
   const [showMenu, setShowMenu] = useState(false);
   const [films, setFilms] = useState([]);
   const [hovered, setHovered] = useState(null);
   const [activeFilm, setActiveFilm] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeGenre, setActiveGenre] = useState(null);
 
   const router = useRouter();
 
@@ -106,13 +139,17 @@ export default function Page() {
 
   const filteredFilms = films.filter((film) => {
     const query = searchTerm.trim().toLowerCase();
-    return (
+    const matchesSearch =
       !query ||
       film.title?.toLowerCase().includes(query) ||
       film.creator?.toLowerCase().includes(query) ||
       film.genre?.toLowerCase().includes(query) ||
-      film.description?.toLowerCase().includes(query)
-    );
+      film.description?.toLowerCase().includes(query);
+
+    const matchesGenre =
+      !activeGenre || film.genre?.toLowerCase() === activeGenre.toLowerCase();
+
+    return matchesSearch && matchesGenre;
   });
 
   return (
@@ -232,27 +269,30 @@ export default function Page() {
       </div>
 
       {/* HERO */}
-      <div
-        style={{
-          width: "100%",
-          height: "550px",
-          marginBottom: "24px",
-          background: BG,
-          display: "flex",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ width: "100%", height: "100%" }}>
-          <AVODPlayer
+      <div
+        style={{
+          width: "100%",
+          height: "550px",
+          marginBottom: "24px",
+          background: BG,
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ width: "100%", height: "100%" }}>
+          <AVODPlayer
             autoPlay
-            vastTag="https://aivnetwork.online/ads/karmicleaf-vast.xml"            
-            src={getBunnyStreamUrl(
+            vastTag="https://aivnetwork.online/ads/karmicleaf-vast.xml"            
+            src={getBunnyStreamUrl(
               "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
             )}
           />
         </div>
       </div>
+
+      {/* GENRE FILTER BAR */}
+      <GenreFilterBar activeGenre={activeGenre} onSelect={setActiveGenre} />
 
       {/* FULLSCREEN PLAYER */}
       {activeFilm && (
@@ -313,7 +353,7 @@ export default function Page() {
       )}
 
       {/* FILM GRID */}
-      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
+      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
         <div
           style={{
             display: "grid",
@@ -334,9 +374,9 @@ export default function Page() {
                   position: "relative",
                   cursor: "pointer",
                   zIndex: isHovered ? 50 : 1,
-          }}
+          }}
               >
-                <div 
+                <div 
                   style={{
                     position: "relative",
                     borderRadius: "4px",
