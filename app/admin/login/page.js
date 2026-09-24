@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const [digits, setDigits] = useState(['', '', '', '']);
   const [error, setError] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -87,5 +87,28 @@ export default function AdminLoginPage() {
       </div>
       {error && <p style={{ color: '#e50914', fontSize: '14px' }}>Incorrect code</p>}
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          style={{
+            background: '#000',
+            color: '#fff',
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          Loading...
+        </div>
+      }
+    >
+      <AdminLoginForm />
+    </Suspense>
   );
 }
