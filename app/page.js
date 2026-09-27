@@ -12,482 +12,515 @@ const CARD_BG = "#181818";
 const ACCENT = "#e50914";
 const TEXT_SECONDARY = "#b3b3b3";
 const TEXT_MUTED = "#808080";
+const CONTENT_MAX_WIDTH = "1600px";
 
 const GENRES = ["AIV Originals", "Classic Horror", "Sci-Fi", "Horror", "Comedy"];
 
 function parseBunnyUrl(url) {
-  if (!url) return null;
-  const match = url.match(
-    /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
-  );
-  if (!match) return null;
-  const [, libraryId, videoId] = match;
-  return { libraryId, videoId };
+  if (!url) return null;
+  const match = url.match(
+    /player\.mediadelivery\.net\/(?:play|embed)\/(\d+)\/([a-f0-9-]+)/i
+  );
+  if (!match) return null;
+  const [, libraryId, videoId] = match;
+  return { libraryId, videoId };
 }
 
 function getBunnyStreamUrl(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return url;
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/playlist.m3u8`;
+  const parsed = parseBunnyUrl(url);
+  if (!parsed) return url;
+  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/playlist.m3u8`;
 }
 
 function getBunnyThumbnail(url) {
-  const parsed = parseBunnyUrl(url);
-  if (!parsed) return null;
-  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/thumbnail.jpg`;
+  const parsed = parseBunnyUrl(url);
+  if (!parsed) return null;
+  return `https://${BUNNY_CDN_HOSTNAME}/${parsed.videoId}/thumbnail.jpg`;
 }
 
 function getYouTubeId(url) {
-  if (!url) return null;
-  const regex =
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
+  if (!url) return null;
+  const regex =
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&?/]+)/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
 }
 
 function getYouTubeThumbnail(url) {
-  const videoId = getYouTubeId(url);
-  return videoId
-    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-    : null;
+  const videoId = getYouTubeId(url);
+  return videoId
+    ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+    : null;
 }
 
 function isYouTubeUrl(url) {
-  return Boolean(url?.includes("youtube.com") || url?.includes("youtu.be"));
+  return Boolean(url?.includes("youtube.com") || url?.includes("youtu.be"));
 }
 
 function FilmThumbnail({ film, alt, style }) {
-  const url = film?.video_url || "";
-  const candidates = [
-    film?.thumbnail_url,
-    getYouTubeThumbnail(url),
-    getBunnyThumbnail(url),
-    FALLBACK_THUMBNAIL,
-  ].filter(Boolean);
+  const url = film?.video_url || "";
+  const candidates = [
+    film?.thumbnail_url,
+    getYouTubeThumbnail(url),
+    getBunnyThumbnail(url),
+    FALLBACK_THUMBNAIL,
+  ].filter(Boolean);
 
-  const [index, setIndex] = useState(0);
-  const currentSrc = candidates[index] || FALLBACK_THUMBNAIL;
+  const [index, setIndex] = useState(0);
+  const currentSrc = candidates[index] || FALLBACK_THUMBNAIL;
 
-  function handleError() {
-    setIndex((prev) => (prev + 1 < candidates.length ? prev + 1 : prev));
-  }
+  function handleError() {
+    setIndex((prev) => (prev + 1 < candidates.length ? prev + 1 : prev));
+  }
 
-  return <img src={currentSrc} alt={alt} onError={handleError} style={style} />;
+  return <img src={currentSrc} alt={alt} onError={handleError} style={style} />;
 }
 
 function GenreFilterBar({ activeGenre, onSelect }) {
-  return (
-    <div style={{ display: "flex", gap: "12px", padding: "0 24px 24px", flexWrap: "wrap" }}>
-      {GENRES.map((genre) => {
-        const isActive = activeGenre === genre;
-        return (
-          <button
-            key={genre}
-            type="button"
-            onClick={() => onSelect(isActive ? null : genre)}
-            style={{
-              padding: "8px 20px",
-              borderRadius: "999px",
-              border: isActive ? `1px solid ${ACCENT}` : "1px solid #333",
-              background: isActive ? ACCENT : "#111",
-              color: "#fff",
-              fontSize: "14px",
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            {genre}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return (
+    <div
+      style={{
+        maxWidth: CONTENT_MAX_WIDTH,
+        margin: "0 auto",
+        padding: "0 24px 32px",
+        boxSizing: "border-box",
+        width: "100%",
+        display: "flex",
+        justifyContent: "center",
+        gap: "12px",
+        flexWrap: "wrap",
+      }}
+    >
+      {GENRES.map((genre) => {
+        const isActive = activeGenre === genre;
+        return (
+          <button
+            key={genre}
+            type="button"
+            onClick={() => onSelect(isActive ? null : genre)}
+            style={{
+              padding: "8px 20px",
+              borderRadius: "999px",
+              border: isActive ? `1px solid ${ACCENT}` : "1px solid #333",
+              background: isActive ? ACCENT : "#111",
+              color: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {genre}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function Page() {
-  const [showMenu, setShowMenu] = useState(false);
-  const [films, setFilms] = useState([]);
-  const [hovered, setHovered] = useState(null);
-  const [activeFilm, setActiveFilm] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeGenre, setActiveGenre] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [films, setFilms] = useState([]);
+  const [hovered, setHovered] = useState(null);
+  const [activeFilm, setActiveFilm] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeGenre, setActiveGenre] = useState(null);
 
-  const router = useRouter();
+  const router = useRouter();
 
-  useEffect(() => {
-    loadFilms();
-  }, []);
+  useEffect(() => {
+    loadFilms();
+  }, []);
 
-  async function loadFilms() {
-    try {
-      const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from("films")
-        .select("*")
-        .order("id", { ascending: false });
+  async function loadFilms() {
+    try {
+      const supabase = getSupabase();
+      const { data, error } = await supabase
+        .from("films")
+        .select("*")
+        .order("id", { ascending: false });
 
-      if (error) {
-        console.error("Supabase load error:", error);
-        return;
-      }
-      setFilms(data || []);
-    } catch (error) {
-      console.error("Load films error:", error);
-    }
-  }
+      if (error) {
+        console.error("Supabase load error:", error);
+        return;
+      }
+      setFilms(data || []);
+    } catch (error) {
+      console.error("Load films error:", error);
+    }
+  }
 
-  const filteredFilms = films.filter((film) => {
-    const query = searchTerm.trim().toLowerCase();
-    const matchesSearch =
-      !query ||
-      film.title?.toLowerCase().includes(query) ||
-      film.creator?.toLowerCase().includes(query) ||
-      film.genre?.toLowerCase().includes(query) ||
-      film.description?.toLowerCase().includes(query);
+  const filteredFilms = films.filter((film) => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      film.title?.toLowerCase().includes(query) ||
+      film.creator?.toLowerCase().includes(query) ||
+      film.genre?.toLowerCase().includes(query) ||
+      film.description?.toLowerCase().includes(query);
 
-    const matchesGenre =
-      !activeGenre || film.genre?.toLowerCase() === activeGenre.toLowerCase();
+    const matchesGenre =
+      !activeGenre || film.genre?.toLowerCase() === activeGenre.toLowerCase();
 
-    return matchesSearch && matchesGenre;
-  });
+    return matchesSearch && matchesGenre;
+  });
 
-  return (
-    <div style={{ background: BG, color: "#fff", minHeight: "100vh" }}>
-      {/* TOP BAR */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          padding: "14px 24px",
-          alignItems: "center",
-          background: "rgba(0,0,0,0.95)",
-          position: "sticky",
-          top: 0,
-          zIndex: 9999,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setShowMenu((c) => !c)}
-          style={topBarButtonPrimary}
-        >
-          ☰ Menu
-        </button>
+  return (
+    <div style={{ background: BG, color: "#fff", minHeight: "100vh" }}>
+      {/* Only film cards may occupy grid cells (blocks injected ads/blank slots) */}
+      <style>{`.film-grid > :not(.film-card) { display: none !important; }`}</style>
 
-        <input
-          aria-label="Search films"
-          placeholder="Search films..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: "9px 12px",
-            width: "230px",
-            maxWidth: "42vw",
-            background: "#222",
-            color: "#fff",
-            border: "1px solid #333",
-            borderRadius: "4px",
-            fontSize: "14px",
-          }}
-        />
+      {/* TOP BAR */}
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          padding: "14px 24px",
+          alignItems: "center",
+          background: "rgba(0,0,0,0.95)",
+          position: "sticky",
+          top: 0,
+          zIndex: 9999,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowMenu((c) => !c)}
+          style={topBarButtonPrimary}
+        >
+          ☰ Menu
+        </button>
 
-        <button
-          type="button"
-          onClick={() => router.push("/submit")}
-          style={topBarButtonPrimary}
-        >
-          + Submit Film
-        </button>
+        <input
+          aria-label="Search films"
+          placeholder="Search films..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            padding: "9px 12px",
+            width: "230px",
+            maxWidth: "42vw",
+            background: "#222",
+            color: "#fff",
+            border: "1px solid #333",
+            borderRadius: "4px",
+            fontSize: "14px",
+          }}
+        />
 
-        <button
-          type="button"
-          onClick={() => router.push("/signin")}
-          style={topBarButtonSecondary}
-        >
-          Sign In
-        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/submit")}
+          style={topBarButtonPrimary}
+        >
+          + Submit Film
+        </button>
 
-        <button
-          type="button"
-          onClick={() => router.push("/support")}
-          style={{ ...topBarButtonSecondary, marginLeft: "auto" }}
-        >
-          Support
-        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/signin")}
+          style={topBarButtonSecondary}
+        >
+          Sign In
+        </button>
 
-        {showMenu && (
-          <div
-            style={{
-              position: "absolute",
-              top: "58px",
-              left: "24px",
-              background: "#181818",
-              border: "1px solid #2a2a2a",
-              borderRadius: "6px",
-              padding: "10px",
-              zIndex: 10000,
-              minWidth: "240px",
-              maxHeight: "70vh",
-              overflowY: "auto",
-              boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
-            }}
-          >
-            {films.map((film) => (
-              <button
-                key={film.id}
-                type="button"
-                onClick={() => {
-                  setActiveFilm(film);
-                  setShowMenu(false);
-                }}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "10px",
-                  background: "transparent",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  fontSize: "14px",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#2a2a2a")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-              >
-                {film.title || "Untitled Film"}
-              </button>
-            ))}
-            {films.length === 0 && (
-              <div style={{ color: TEXT_MUTED, padding: "10px", fontSize: "14px" }}>
-                No films yet.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        <button
+          type="button"
+          onClick={() => router.push("/support")}
+          style={{ ...topBarButtonSecondary, marginLeft: "auto" }}
+        >
+          Support
+        </button>
 
-      {/* HERO */}
-      <div
-        style={{
-          width: "100%",
-          height: "550px",
-          marginBottom: "24px",
-          background: BG,
-          display: "flex",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ width: "100%", height: "100%" }}>
-          <AVODPlayer
-            autoPlay
-            vastTag="https://aivnetwork.online/ads/karmicleaf-vast.xml"            
-            src={getBunnyStreamUrl(
-              "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
-            )}
-          />
-        </div>
-      </div>
+        {showMenu && (
+          <div
+            style={{
+              position: "absolute",
+              top: "58px",
+              left: "24px",
+              background: "#181818",
+              border: "1px solid #2a2a2a",
+              borderRadius: "6px",
+              padding: "10px",
+              zIndex: 10000,
+              minWidth: "240px",
+              maxHeight: "70vh",
+              overflowY: "auto",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.6)",
+            }}
+          >
+            {films.map((film) => (
+              <button
+                key={film.id}
+                type="button"
+                onClick={() => {
+                  setActiveFilm(film);
+                  setShowMenu(false);
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "10px",
+                  background: "transparent",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontSize: "14px",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#2a2a2a")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                {film.title || "Untitled Film"}
+              </button>
+            ))}
+            {films.length === 0 && (
+              <div style={{ color: TEXT_MUTED, padding: "10px", fontSize: "14px" }}>
+                No films yet.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-      {/* GENRE FILTER BAR */}
-      <GenreFilterBar activeGenre={activeGenre} onSelect={setActiveGenre} />
+      {/* HERO */}
+      <div
+        style={{
+          width: "100%",
+          height: "550px",
+          marginBottom: "24px",
+          background: BG,
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ width: "100%", height: "100%" }}>
+          <AVODPlayer
+            autoPlay
+            vastTag="https://aivnetwork.online/ads/karmicleaf-vast.xml"
+            src={getBunnyStreamUrl(
+              "https://player.mediadelivery.net/embed/697977/264c75e3-cf23-4154-a081-98883ca50742"
+            )}
+          />
+        </div>
+      </div>
 
-      {/* FULLSCREEN PLAYER */}
-      {activeFilm && (
-        <div
-          onClick={() => setActiveFilm(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.96)",
-            zIndex: 20000,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <button
-            type="button"
-            aria-label="Close player"
-            onClick={() => setActiveFilm(null)}
-            style={{
-              position: "absolute",
-              top: "20px",
-              right: "25px",
-              fontSize: "28px",
-              background: "none",
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              zIndex: 20001,
-            }}
-          >
-            ✕
-          </button>
+      {/* GENRE FILTER BAR */}
+      <GenreFilterBar activeGenre={activeGenre} onSelect={setActiveGenre} />
 
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: "90%", maxWidth: "1100px", background: "#000" }}
-          >
-            <AVODPlayer
-              src={
-                isYouTubeUrl(activeFilm.video_url)
-                  ? activeFilm.video_url
-                  : getBunnyStreamUrl(activeFilm.video_url)
-              }
-            />
-            <div style={{ padding: "16px 4px" }}>
-              <h2 style={{ fontSize: "22px", margin: "0 0 6px" }}>
-                {activeFilm.title || "Untitled Film"}
-              </h2>
-              <div style={{ fontSize: "14px", color: TEXT_SECONDARY }}>
-                {activeFilm.genre || "AI Film"}
-                {(activeFilm.release_year || activeFilm.year) &&
-                  ` • ${activeFilm.release_year || activeFilm.year}`}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* FULLSCREEN PLAYER */}
+      {activeFilm && (
+        <div
+          onClick={() => setActiveFilm(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.96)",
+            zIndex: 20000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Close player"
+            onClick={() => setActiveFilm(null)}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "25px",
+              fontSize: "28px",
+              background: "none",
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              zIndex: 20001,
+            }}
+          >
+            ✕
+          </button>
 
-      {/* FILM GRID */}
-      <div style={{ maxWidth: "1600px", margin: "0 auto", padding: "0 24px 40px", boxSizing: "border-box", width: "100%" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "24px 16px",
-          }}
-        >
-          {filteredFilms.map((film) => {
-            const isHovered = hovered === film.id;
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "90%", maxWidth: "1100px", background: "#000" }}
+          >
+            <AVODPlayer
+              src={
+                isYouTubeUrl(activeFilm.video_url)
+                  ? activeFilm.video_url
+                  : getBunnyStreamUrl(activeFilm.video_url)
+              }
+            />
+            <div style={{ padding: "16px 4px" }}>
+              <h2 style={{ fontSize: "22px", margin: "0 0 6px" }}>
+                {activeFilm.title || "Untitled Film"}
+              </h2>
+              <div style={{ fontSize: "14px", color: TEXT_SECONDARY }}>
+                {activeFilm.genre || "AI Film"}
+                {(activeFilm.release_year || activeFilm.year) &&
+                  ` • ${activeFilm.release_year || activeFilm.year}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-            return (
-              <div
-                key={film.id}
-                onMouseEnter={() => setHovered(film.id)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => setActiveFilm(film)}
-                style={{
-                  position: "relative",
-                  cursor: "pointer",
-                  zIndex: isHovered ? 50 : 1,
-          }}
-              >
-                <div 
-                  style={{
-                    position: "relative",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    background: "#222",
-                    aspectRatio: "16 / 9",
-                    transform: isHovered ? "scale(1.08)" : "scale(1)",
-                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                    boxShadow: isHovered
-                      ? "0 16px 32px rgba(0,0,0,0.7)"
-                      : "0 2px 6px rgba(0,0,0,0.3)",
-                  }}
-                >
-                  <FilmThumbnail
-                    film={film}
-                    alt={film.title || "Film"}
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
+      {/* FILM GRID */}
+      <div
+        style={{
+          maxWidth: CONTENT_MAX_WIDTH,
+          margin: "0 auto",
+          padding: "0 24px 40px",
+          boxSizing: "border-box",
+          width: "100%",
+        }}
+      >
+        <div
+          className="film-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "24px 16px",
+          }}
+        >
+          {filteredFilms.map((film) => {
+            const isHovered = hovered === film.id;
 
-                  {/* Bottom gradient, always visible for legibility */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: "55%",
-                      background:
-                        "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0))",
-                      pointerEvents: "none",
-                    }}
-                  />
+            return (
+              <div
+                key={film.id}
+                className="film-card"
+                onMouseEnter={() => setHovered(film.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => setActiveFilm(film)}
+                style={{
+                  position: "relative",
+                  cursor: "pointer",
+                  zIndex: isHovered ? 50 : 1,
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    background: "#222",
+                    aspectRatio: "16 / 9",
+                    transform: isHovered ? "scale(1.08)" : "scale(1)",
+                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                    boxShadow: isHovered
+                      ? "0 16px 32px rgba(0,0,0,0.7)"
+                      : "0 2px 6px rgba(0,0,0,0.3)",
+                  }}
+                >
+                  <FilmThumbnail
+                    film={film}
+                    alt={film.title || "Film"}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
 
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      padding: "10px 12px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: "#fff",
-                        textAlign: "left",
-                        marginBottom: isHovered ? "4px" : 0,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {film.title || "Untitled Film"}
-                    </div>
+                  {/* Bottom gradient, always visible for legibility */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: "55%",
+                      background:
+                        "linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0))",
+                      pointerEvents: "none",
+                    }}
+                  />
 
-                    {isHovered && (
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          color: TEXT_SECONDARY,
-                          textAlign: "left",
-                        }}
-                      >
-                        {film.genre || "AI Film"}
-                        {(film.release_year || film.year) &&
-                          ` • ${film.release_year || film.year}`}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 700,
+                        color: "#fff",
+                        textAlign: "left",
+                        marginBottom: isHovered ? "4px" : 0,
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {film.title || "Untitled Film"}
+                    </div>
 
-        {filteredFilms.length === 0 && (
-          <div style={{ color: TEXT_MUTED, marginTop: "16px", fontSize: "14px" }}>
-            No films found.
-          </div>
-        )}
-      </div>
-    </div>
-  );
+                    {isHovered && (
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: TEXT_SECONDARY,
+                          textAlign: "left",
+                        }}
+                      >
+                        {film.genre || "AI Film"}
+                        {(film.release_year || film.year) &&
+                          ` • ${film.release_year || film.year}`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredFilms.length === 0 && (
+          <div
+            style={{
+              color: TEXT_MUTED,
+              marginTop: "16px",
+              fontSize: "14px",
+              textAlign: "center",
+            }}
+          >
+            No films found.
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 const topBarButtonPrimary = {
-  background: ACCENT,
-  color: "#fff",
-  border: "none",
-  padding: "9px 14px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  borderRadius: "4px",
-  fontSize: "14px",
+  background: ACCENT,
+  color: "#fff",
+  border: "none",
+  padding: "9px 14px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
 };
 
 const topBarButtonSecondary = {
-  background: "transparent",
-  color: "#fff",
-  border: "1px solid #444",
-  padding: "9px 14px",
-  cursor: "pointer",
-  fontWeight: "bold",
-  borderRadius: "4px",
-  fontSize: "14px",
+  background: "transparent",
+  color: "#fff",
+  border: "1px solid #444",
+  padding: "9px 14px",
+  cursor: "pointer",
+  fontWeight: "bold",
+  borderRadius: "4px",
+  fontSize: "14px",
 };
