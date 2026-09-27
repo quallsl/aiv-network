@@ -1,5 +1,4 @@
 import "./globals.css";
-import Script from "next/script";
 
 export const metadata = {
   title: "AIV Network",
@@ -11,20 +10,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <Script
-          src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"
-          strategy="beforeInteractive"
-        />
-        <Script
-          id="adsense-script"
+      <head>
+        <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js" />
+        <script
           async
-          strategy="beforeInteractive"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4013153499723354"
           crossOrigin="anonymous"
         />
-        {children}
-      </body>
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
