@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Hls from "hls.js";
 
 const TEST_VAST_TAG =
-  "https://pubads.g.doubleclick.net/gampad/ads?sz=640x480&iu=/124319096/external/single_ad_samples&ciu_szs=300x250&cust_params=sample_ct%3Dlinear&gdfp_req=1&output=vast&env=vp&unviewed_position_start=1&impl=s&correlator=";
+  "https://aivnetwork.online/ads/siteready-vast.xml?cb=";
 
 const SKIP_AFTER_SECONDS = 5;
 

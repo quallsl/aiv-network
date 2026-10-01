@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VAST version="3.0">
+  <Ad id="siteready-001">
+    <InLine>
+      <AdSystem>AIV Network</AdSystem>
+      <AdTitle>SiteReady Pre-Roll</AdTitle>
+      <Impression><![CDATA[https://aivnetwork.online/api/track?ad=siteready&event=impression]]></Impression>
+      <Creatives>
+        <Creative>
+          <Linear>
+            <Duration>00:00:54</Duration>
+            <TrackingEvents>
+              <Tracking event="start"><![CDATA[https://aivnetwork.online/api/track?ad=siteready&event=start]]></Tracking>
+              <Tracking event="complete"><![CDATA[https://aivnetwork.online/api/track?ad=siteready&event=complete]]></Tracking>
+              <Tracking event="skip"><![CDATA[https://aivnetwork.online/api/track?ad=siteready&event=skip]]></Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough><![CDATA[https://sitereadysystem.com/]]></ClickThrough>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4" width="1280" height="720" bitrate="1500">
+                <![CDATA[https://vz-b7971a5e-657.b-cdn.net/c2b4624d-6e39-46fe-b6a3-9f05b1247ccb/play_720p.mp4]]>
+              </MediaFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>
