@@ -110,6 +110,12 @@ export default function SubmitPage() {
 
       const supabase = getSupabase();
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Please log in to your filmmaker account before submitting.");
+        return;
+      }
+
       const normalizedVideoUrl = normalizeVideoUrl(form.video_url);
 
       const thumbnail =
@@ -127,6 +133,8 @@ export default function SubmitPage() {
           year: form.year.trim(),
           thumbnail_url: thumbnail,
           video_url: normalizedVideoUrl,
+          artist_id: user.id,
+          status: "pending",
         },
       ]);
 
