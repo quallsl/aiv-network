@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <div style={{ width: "100%", maxWidth: "800px" }}>
         <h1 style={{ fontSize: "36px", marginBottom: "10px" }}>Privacy Policy</h1>
         <p style={{ color: "#999", marginBottom: "40px" }}>
-          Last updated: July 27, 2026
+          Last updated: October 30, 2026
         </p>
 
         <section style={{ marginBottom: "32px" }}>
@@ -59,10 +59,32 @@ export default function PrivacyPage() {
             Advertising Data
           </h3>
           <p style={{ color: "#ccc", lineHeight: 1.6 }}>
-            AIV Network is a free, ad-supported service. We use Google AdMob
-            to serve advertisements. AdMob may collect device identifiers,
-            approximate location, and ad interaction data to deliver and
-            measure ads. You can learn more about Google's data practices at{" "}
+            AIV Network is a free, ad-supported service. On our website we
+            use Google AdSense and Google Ad Manager to serve display and
+            video ads; in our mobile app we use Google AdMob. We also sell
+            some video ad placements directly to advertisers.
+          </p>
+          <p style={{ color: "#ccc", lineHeight: 1.6, marginTop: "12px" }}>
+            Third-party vendors, including Google, use cookies to serve ads
+            based on your prior visits to this website or other websites.
+            Google's use of advertising cookies enables it and its partners to
+            serve ads to you based on your visits to this site and/or other
+            sites on the Internet. These vendors may also use web beacons,
+            device identifiers, and approximate location to deliver and
+            measure ads.
+          </p>
+          <p style={{ color: "#ccc", lineHeight: 1.6, marginTop: "12px" }}>
+            You may opt out of personalized advertising by visiting{" "}
+            <a href="https://adssettings.google.com" style={{ color: "#e50914" }}>
+              Google Ads Settings
+            </a>
+            . You can opt out of other participating third-party vendors' use
+            of cookies for personalized advertising at{" "}
+            <a href="https://www.aboutads.info/choices" style={{ color: "#e50914" }}>
+              www.aboutads.info
+            </a>
+            . To learn how Google uses data from sites that use its services,
+            visit{" "}
             <a
               href="https://policies.google.com/technologies/partner-sites"
               style={{ color: "#e50914" }}
@@ -94,7 +116,7 @@ export default function PrivacyPage() {
             We do not sell your personal information. We share information
             with service providers who help us operate the Service,
             including Supabase (authentication and data storage), Bunny.net
-            (video hosting and delivery), and Google AdMob (advertising).
+            (video hosting and delivery), and Google (advertising, through AdSense, Ad Manager, and AdMob).
             These providers process data on our behalf and are bound by their
             own privacy and data protection obligations.
           </p>

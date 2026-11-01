@@ -137,7 +137,7 @@ export default function Page() {
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from("films")
-        .select("*")
+        .select("*").or("status.is.null,status.not.in.(pending,rejected,removed)")
         .order("id", { ascending: false });
 
       if (error) {
@@ -363,6 +363,12 @@ export default function Page() {
                 {(activeFilm.release_year || activeFilm.year) &&
                   ` • ${activeFilm.release_year || activeFilm.year}`}
               </div>
+              <a
+                href={`/film/${activeFilm.id}`}
+                style={{ display: "inline-block", marginTop: "10px", color: ACCENT, fontSize: "14px" }}
+              >
+                Film details & synopsis →
+              </a>
             </div>
           </div>
         </div>
