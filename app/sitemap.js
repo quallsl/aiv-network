@@ -9,7 +9,7 @@ export default async function sitemap() {
   );
   const filmPages = films.map((film) => ({
     url: `${SITE_URL}/film/${film.id}`,
-    lastModified: film.updated_at || film.created_at || undefined,
+    lastModified: film.updated_at || film.created_at ? new Date(film.updated_at || film.created_at).toISOString() : undefined,
     changeFrequency: "monthly",
     priority: 0.8,
   }));
