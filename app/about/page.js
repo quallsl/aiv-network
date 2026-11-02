@@ -56,8 +56,7 @@ export default function AboutPage() {
 
         <h2 style={h2}>AIV Originals</h2>
         <p style={p}>
-          AIV Originals are where we push the form ourselves. Currently in
-          development is <em>Eight Must Fall</em>, an AI musical horror-western
+          AIV Originals are where we push the form ourselves. Coming soon is          <em>Eight Must Fall</em>, an AIV Original horror-western musical
           adapted from an original screenplay.
         </p>
 
